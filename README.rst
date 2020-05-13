@@ -71,7 +71,8 @@ Running ``plex_config_excludes show`` will display, in this instance, those thre
 convert_mp4move_to_mkv
 ========================
 
-.. note:: IN PROGRESS
+.. note::
+   IN PROGRESS
 
 .. these are the links
    
