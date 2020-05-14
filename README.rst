@@ -80,7 +80,7 @@ In ``exclude`` mode, for example, this is how it looks when we choose to exclude
 
 Running ``plex_config_excludes show`` will display, in this instance, those three shows instead of the original two.
 
-.._convert_mp4movie_to_mkv:
+.. _convert_mp4movie_to_mkv:
 
 convert_mp4movie_to_mkv
 ========================
