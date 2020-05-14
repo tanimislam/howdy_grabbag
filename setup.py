@@ -35,7 +35,7 @@ setup(
     #
     ## requirements
     install_requires = [ 'tabulate' ],
-    dependency_links = [ 'git+https://github.org/tanimislam/plexstuff.git#egg=plexstuff' ],
+    dependency_links = [ 'git+https://github.com/tanimislam/plexstuff.git#egg=plexstuff' ],
     python_requires = '>=3',
     #
     ## the executables I am creating
