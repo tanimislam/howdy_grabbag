@@ -1,6 +1,17 @@
 from setuptools import setup, find_packages
+from distutils.spawn import find_executable
 #
 ## requirements are in "requirements.txt"
+#
+## fail hard if cannot find ffmpeg, ffprobe
+if find_executable( 'ffmpeg' ) is None:
+    raise ValueError("Error, cannot find necessary executable: ffmpeg" )
+if find_executable( 'ffprobe' ) is None:
+    raise ValueError("Error, cannot find necessary executable: ffprobe" )
+if find_executable( 'mkvmerge' ) is None:
+    raise ValueError("Error, cannot find necessary executable: mkvmerge" )
+if find_executable( 'HandBrakeCLI' ) is None:
+    print( "Although would be nice to have, cannot find HandBrakeCLI. Cannot do transcoding of movies here." )
 
 setup(
     name = 'plexstuff_grabbag',
@@ -34,7 +45,7 @@ setup(
     ],
     #
     ## requirements
-    install_requires = [ 'tabulate' ],
+    install_requires = [ 'tabulate', 'mutagen' ],
     dependency_links = [ 'git+https://github.com/tanimislam/plexstuff.git#egg=plexstuff' ],
     python_requires = '>=3',
     #

@@ -19,9 +19,10 @@ hcli_exec = find_executable( 'HandBrakeCLI' )
 assert( all(map(lambda exec_f: exec_f is not None,
                 ( ffmpeg_exec, mkvmerge_exec, hcli_exec ) ) ) )
 
-def convert_mp4_movie( mp4movie, name, year, quality = 28,
-                       srtfile = None,
-                       delete_files = False ):
+def convert_mp4_movie(
+        mp4movie, name, year, quality = 28,
+        srtfile = None,
+        delete_files = False ):
     time0 = time.time( )
     assert( os.path.isfile( mp4movie ) )
     assert( os.path.basename( mp4movie ).lower( ).endswith( '.mp4' ) )
