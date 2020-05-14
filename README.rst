@@ -3,7 +3,17 @@ Plexstuff-GRABBAG - A Bunch of Additional Plex and Multimedia Utility Scripts
 ###############################################################################
 This repository consists of a bunch of random utility scripts that use, or are associated with, plexstuff_. plexstuff_ is an SDK used to manage movies, television shows, and music located on a Plex_ server. Its relatively comprehensive documentation (missing documentation on its GUIs) lives in `https://plexstuff.readthedocs.io`. This tool depends explicitly on plexstuff_ and tabulate_ only.
 
+Installing this software is unusual but straightforward. Just run this command, using pip3_ (pip_ for Python 3),
+
+.. code-block:: bash
+
+   pip3 install --user --upgrade git+https://github.com/tanimislam/plexstuff_grabbag#egg=plexstuff_grabbag
+
+And then these executables, plex_config_excludes_ and convert_mp4move_to_mkv, will live in ``~/.local/bin``.
+
 The documentation starts with a description of each command line tool in this README, and grows from there. As this repository evolves, the documentation *may* become more organized. Right now, it is what it is.
+
+.. _plex_config_excludes:
 
 plex_config_excludes
 ======================
@@ -68,7 +78,9 @@ In ``exclude`` mode, for example, this is how it looks when we choose to exclude
 
 Running ``plex_config_excludes show`` will display, in this instance, those three shows instead of the original two.
 
-convert_mp4move_to_mkv
+.._convert_mp4movie_to_mkv:
+
+convert_mp4movie_to_mkv
 ========================
 
 .. note::
