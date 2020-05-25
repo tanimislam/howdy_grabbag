@@ -1,9 +1,9 @@
-###############################################################################
-Plexstuff-GRABBAG - A Bunch of Additional Plex and Multimedia Utility Scripts
-###############################################################################
+===============================================================================
+ Plexstuff-GRABBAG - A Bunch of Additional Plex and Multimedia Utility Scripts
+===============================================================================
 This repository consists of a bunch of random utility scripts that use, or are associated with, plexstuff_. plexstuff_ is an SDK used to manage movies, television shows, and music located on a Plex_ server. Its relatively comprehensive documentation (missing documentation on its GUIs) lives in `https://plexstuff.readthedocs.io`.
 
-This module depends explicitly on plexstuff_, tabulate_, and mutagen_. This module will not install and run without ffmpeg_, ffprobe_, and mkvmerge_. This module will install without HandBrakeCLI_, but with reduced functionality -- no transcoding in convert_mp4movie_to_mkv_.
+This module depends explicitly on plexstuff_ and mutagen_. This module will not install and run without ffmpeg_, ffprobe_, and mkvmerge_. This module will install without HandBrakeCLI_, but with reduced functionality -- no transcoding in convert_mp4movie_to_mkv_.
 
 Installing this software is unusual but straightforward. Just run this command, using ``pip3`` (pip_ for Python 3),
 
@@ -18,7 +18,7 @@ The documentation starts with a description of each command line tool in this RE
 .. _convert_mp4movie_to_mkv:
 
 convert_mp4movie_to_mkv
-========================
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 This converts an MP4_ movie file, with optional SRT_ English subtitle file, into an MKV_ movie file with appropriate metadata -- movie title and release year -- with an SRT_ English subtitle as a stream. Optionally, this executable can also transcode the larger MP4_ file into an MKV_ file with much smaller size but with no noticeable loss in video quality; it uses HandBrakeCLI_ for that functionality.  The help output, when running `convert_mp4movie_to_mkv -h`, produces the top level help,
 
@@ -47,7 +47,7 @@ In normal operation, ``convert_mp4movie_to_mkv`` losslessly converts an MP4_ mov
 
 * ``--noinfo`` operates with less debugging info.
 
-Finally, the ``transform`` option will transcode the movie, using HandBrakeCLI_, to a specific psychovisual quality. The help output in this mode, when running ``convert_mp4movie_to_mkv transform -h``, produces this help,
+Finally, the ``transform`` option will transcode the movie, using HandBrakeCLI_, to a specific psychovisual quality. This is the help output in this mode, when running ``convert_mp4movie_to_mkv transform -h``,
 
 .. code-block:: bash
 
@@ -73,8 +73,3 @@ The default quality is 26. Higher numbers means smaller files but lower video qu
 .. _plexstuff: https://github.com/tanimislam/plexstuff
 .. _Plex: https://plex.tv
 .. _SRT: https://en.wikipedia.org/wiki/SubRip
-.. _tabulate: https://github.com/astanin/python-tabulate
-.. _gpb: https://plexstuff.readthedocs.io/plex-tvdb/cli_tools/plex_tvdb_cli.html?highlight=get_plextvdb_batch#get-plextvdb-batch
-.. _`Lip Sync Battle`: https://www.imdb.com/title/tt4335742
-.. _`SpongeBob SquarePants`: https://www.imdb.com/title/tt0206512
-.. _`Reno 911!`: https://www.imdb.com/title/tt0370194
