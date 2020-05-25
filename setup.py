@@ -52,7 +52,6 @@ setup(
     ## the executables I am creating
     entry_points = {
         'console_scripts' : [
-            'plex_config_excludes = plexstuff_grabbag.cli.plex_config_excludes:main',
             'convert_mp4movie_to_mkv = plexstuff_grabbag.cli.convert_mp4movie_to_mkv:main',
             ]
     },

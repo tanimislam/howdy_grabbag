@@ -66,3 +66,6 @@ docs/_build/
 
 # no mailmap file
 mailmap
+
+# no README.html
+README.html
