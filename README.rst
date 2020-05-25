@@ -11,7 +11,7 @@ Installing this software is unusual but straightforward. Just run this command, 
 
    pip3 install --user --upgrade git+https://github.com/tanimislam/plexstuff_grabbag#egg=plexstuff_grabbag
 
-And then these executables (`convert_mp4move_to_mkv <convert_mp4_movie_to_mkv_label_>`_ for now), will live in ``~/.local/bin``.
+And then these executables (`convert_mp4movie_to_mkv <convert_mp4movie_to_mkv_label_>`_ for now), will live in ``~/.local/bin``.
 
 The documentation starts with a description of each command line tool in this README, and grows from there. As this repository evolves, the documentation *may* become more organized. Right now, it is what it is.
 
