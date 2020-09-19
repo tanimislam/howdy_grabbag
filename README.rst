@@ -7,9 +7,9 @@ This module depends explicitly on howdy_ and mutagen_. This module will not inst
 
 Installing this software is unusual but straightforward. Just run this command, using ``pip3`` (pip_ for Python 3),
 
-.. code-block:: bash
+.. code-block:: console
 
-   pip3 install --user --upgrade git+https://github.com/tanimislam/plexstuff_grabbag#egg=plexstuff_grabbag
+   pip3 install --user --upgrade git+https://github.com/tanimislam/howdy_grabbag#egg=howdy_grabbag
 
 And then these executables (`convert_mp4movie_to_mkv <convert_mp4movie_to_mkv_label_>`_ for now), will live in ``~/.local/bin``.
 
