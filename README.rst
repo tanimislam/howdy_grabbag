@@ -19,25 +19,32 @@ The documentation starts with a description of each command line tool in this RE
 
 convert_mp4movie_to_mkv
 ^^^^^^^^^^^^^^^^^^^^^^^^
-
 This converts an MP4_ movie file, with optional SRT_ English subtitle file, into an MKV_ movie file with appropriate metadata -- movie title and release year -- with an SRT_ English subtitle as a stream. Optionally, this executable can also transcode the larger MP4_ file into an MKV_ file with much smaller size but with no noticeable loss in video quality; it uses HandBrakeCLI_ for that functionality.  The help output, when running ``convert_mp4movie_to_mkv -h``, produces the top level help,
 
 .. code-block:: console
 
-   usage: convert_mp4movie_to_mkv [-h] --mp4 MP4 [--srt SRT] -n NAME -y YEAR [--keep] [--noinfo] {transform} ...
+   usage: convert_mp4movie_to_mkv [-h] --mp4 MP4 [--srt SRT] -n NAME -y YEAR
+				  [--outdir OUTDIR] [--keep] [--noinfo]
+				  {transform} ...
 
    positional arguments:
-     {transform}           Option of transforming (using HandBrakeCLI) to smaller size MKV file.
-       transform           Use HandBrakeCLI to transform to different quality MKV movie. Objective is to reduce size.
+     {transform}           Option of transforming (using HandBrakeCLI) to smaller
+			   size MKV file.
+       transform           Use HandBrakeCLI to transform to different quality MKV
+			   movie. Objective is to reduce size.
 
    optional arguments:
      -h, --help            show this help message and exit
      --mp4 MP4             Name of the MP4 movie file name.
-     --srt SRT             Name of the SRT subtitle file associated with the movie.
+     --srt SRT             Name of the SRT subtitle file associated with the
+			   movie.
      -n NAME, --name NAME  Name of the movie.
      -y YEAR, --year YEAR  Year in which the movie was aired.
+     --outdir OUTDIR       The directory into which we save the final MKV file.
+			   Default is /home1/tanimislam/.local/src/howdy_grabbag.
      --keep                If chosen, then KEEP the MP4 and SRT files.
-     --noinfo              If chosen, then run with NO INFO logging (less debugging).
+     --noinfo              If chosen, then run with NO INFO logging (less
+			   debugging).
 
 In normal operation, |convert_mp4movie_to_mkv| losslessly converts an MP4_ movie file, and where possible includes an SRT_ file, into an MKV_ movie file. It requires the ``--mp4`` argument (name of the movie file); the ``-n`` or ``--name`` (name of the released movie) argument; and the ``-y`` or ``--year`` (year in which the movie was released) argument. Here are what the following optional arguments do,
 
@@ -46,6 +53,8 @@ In normal operation, |convert_mp4movie_to_mkv| losslessly converts an MP4_ movie
 * ``--keep`` will *NOT* delete the input MP4_ or SRT_ files.
 
 * ``--noinfo`` operates with less debugging info.
+
+* ``--outdir`` can be used to set the *output directory* into which the MKV_ movie file goes. You can give it a ``~`` prefixed path.
 
 Finally, the |transform| option will transcode the movie, using HandBrakeCLI_, to a specific psychovisual quality. This is the help output in this mode, when running ``convert_mp4movie_to_mkv transform -h``,
 

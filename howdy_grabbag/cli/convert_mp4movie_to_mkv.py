@@ -23,7 +23,7 @@ assert( all(map(lambda exec_f: exec_f is not None,
 def convert_mp4_movie(
         mp4movie, name, year, quality = 28,
         srtfile = None,
-        delete_files = False ):
+        delete_files = False, outdir = os.getcwd( ) ):
     time0 = time.time( )
     assert( os.path.isfile( mp4movie ) )
     assert( os.path.basename( mp4movie ).lower( ).endswith( '.mp4' ) )
@@ -33,7 +33,10 @@ def convert_mp4_movie(
         assert( os.path.basename( srtfile ).lower( ).endswith('.srt' ) )
     #
     ## now create the movie
-    newfile = '%s (%d).mkv' % ( titlecase.titlecase( name ), year )
+    newfile = os.path.abspath(
+        os.path.join(
+            os.path.expanduser( outdir ),
+            '%s (%d).mkv' % ( titlecase.titlecase( name ), year ) ) )
     put_info_mp4movie( mp4movie, name, year )
     proc = subprocess.Popen(
         [ hcli_exec, '-i', mp4movie, '-e', 'x264', '-q', '%d' % quality,
@@ -75,14 +78,17 @@ def put_info_mp4movie( mp4movie, name, year ):
 
 def create_mkv_file( mp4movie, name, year,
                      srtfile = None,
-                     delete_files = False ):
+                     delete_files = False, outdir = os.getcwd( ) ):
     time0 = time.time( )
     assert( os.path.isfile( mp4movie ) )
     assert( os.path.basename( mp4movie ).lower( ).endswith('.mp4' ) )
     if srtfile is not None:
         assert( os.path.isfile( srtfile ) )
         assert( os.path.basename( srtfile ).lower( ).endswith('.srt' ) )
-    newfile = '%s (%d).mkv' % ( titlecase.titlecase( name ), year )
+    newfile = os.path.abspath(
+        os.path.join(
+            os.path.expanduser( outdir ),
+            '%s (%d).mkv' % ( titlecase.titlecase( name ), year ) ) )
     put_info_mp4movie( mp4movie, name, year )
     proc = subprocess.Popen(
         [
@@ -121,19 +127,27 @@ def main( ):
                        help = 'Name of the movie.', required = True )
     parser.add_argument( '-y', '--year', type=int, action='store',
                        help = 'Year in which the movie was aired.', required = True )
-    parser.add_argument( '--keep', dest='do_delete', action='store_false', default = True,
-                       help = 'If chosen, then KEEP the MP4 and SRT files.' )
-    parser.add_argument( '--noinfo', dest='do_info', action='store_false', default = True,
-                       help = 'If chosen, then run with NO INFO logging (less debugging).' )
+    parser.add_argument(
+        '--outdir', dest='outdir', action='store', type=str, default = os.getcwd( ),
+        help = 'The directory into which we save the final MKV file. Default is %s.' % os.getcwd( ) )
+    parser.add_argument(
+        '--keep', dest='do_delete', action='store_false', default = True,
+        help = 'If chosen, then KEEP the MP4 and SRT files.' )
+    parser.add_argument(
+        '--noinfo', dest='do_info', action='store_false', default = True,
+        help = 'If chosen, then run with NO INFO logging (less debugging).' )
     #
     subparser = parser.add_subparsers( help = 'Option of transforming (using HandBrakeCLI) to smaller size MKV file.', dest = 'choose_option' )
-    parser_transform = subparser.add_parser( 'transform', help = 'Use HandBrakeCLI to transform to different quality MKV movie. Objective is to reduce size.' )
-    parser_transform.add_argument( '-q', '--quality', dest='quality', type=int, action='store', default = 26,
-                       help = 'The quality of the conversion that HandBrakeCLI uses. Default is 26.' )
+    parser_transform = subparser.add_parser(
+        'transform', help = 'Use HandBrakeCLI to transform to different quality MKV movie. Objective is to reduce size.' )
+    parser_transform.add_argument(
+        '-q', '--quality', dest='quality', type=int, action='store', default = 26,
+        help = 'The quality of the conversion that HandBrakeCLI uses. Default is 26.' )
     #
     args = parser.parse_args( )
     #
     ## error checking
+    assert( os.path.isdir( args.outdir ) )
     assert( os.path.isfile( args.mp4 ) )
     assert( os.path.basename( args.mp4 ).lower( ).endswith('.mp4' ) )
     if args.srt is not None:
@@ -147,10 +161,12 @@ def main( ):
         convert_mp4_movie(
             args.mp4, args.name, args.year,
             delete_files = args.do_delete,
-            srtfile = args.srt, quality = args.quality )
+            srtfile = args.srt, quality = args.quality,
+            outdir = args.outdir )
         return
     #
     create_mkv_file(
         args.mp4, args.name, args.year,
         delete_files = args.do_delete,
-        srtfile = args.srt )
+        srtfile = args.srt,
+        outdir = args.outdir )
