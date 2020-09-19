@@ -1,9 +1,9 @@
 ===============================================================================
- Plexstuff-GRABBAG - A Bunch of Additional Plex and Multimedia Utility Scripts
+ Howdy-GRABBAG - A Bunch of Additional Plex_ and Multimedia Utility Scripts
 ===============================================================================
-This repository consists of a bunch of random utility scripts that use, or are associated with, plexstuff_. plexstuff_ is an SDK used to manage movies, television shows, and music located on a Plex_ server. Its relatively comprehensive documentation (missing documentation on its GUIs) lives in `https://plexstuff.readthedocs.io`.
+This repository consists of a bunch of random utility scripts that use, or are associated with, Howdy_. Howdy_ is an SDK used to manage movies, television shows, and music located on a Plex_ server. Its relatively comprehensive documentation (missing documentation on two of its GUIs) lives in `howdy.readthedocs.io`_.
 
-This module depends explicitly on plexstuff_ and mutagen_. This module will not install and run without ffmpeg_, ffprobe_, and mkvmerge_. This module will install without HandBrakeCLI_, but with reduced functionality -- no transcoding in convert_mp4movie_to_mkv_.
+This module depends explicitly on howdy_ and mutagen_. This module will not install and run without ffmpeg_, ffprobe_, and mkvmerge_. This module will install without HandBrakeCLI_, but with reduced functionality -- no transcoding in convert_mp4movie_to_mkv_.
 
 Installing this software is unusual but straightforward. Just run this command, using ``pip3`` (pip_ for Python 3),
 
@@ -20,9 +20,9 @@ The documentation starts with a description of each command line tool in this RE
 convert_mp4movie_to_mkv
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-This converts an MP4_ movie file, with optional SRT_ English subtitle file, into an MKV_ movie file with appropriate metadata -- movie title and release year -- with an SRT_ English subtitle as a stream. Optionally, this executable can also transcode the larger MP4_ file into an MKV_ file with much smaller size but with no noticeable loss in video quality; it uses HandBrakeCLI_ for that functionality.  The help output, when running `convert_mp4movie_to_mkv -h`, produces the top level help,
+This converts an MP4_ movie file, with optional SRT_ English subtitle file, into an MKV_ movie file with appropriate metadata -- movie title and release year -- with an SRT_ English subtitle as a stream. Optionally, this executable can also transcode the larger MP4_ file into an MKV_ file with much smaller size but with no noticeable loss in video quality; it uses HandBrakeCLI_ for that functionality.  The help output, when running ``convert_mp4movie_to_mkv -h``, produces the top level help,
 
-.. code-block:: bash
+.. code-block:: console
 
    usage: convert_mp4movie_to_mkv [-h] --mp4 MP4 [--srt SRT] -n NAME -y YEAR [--keep] [--noinfo] {transform} ...
 
@@ -39,7 +39,7 @@ This converts an MP4_ movie file, with optional SRT_ English subtitle file, into
      --keep                If chosen, then KEEP the MP4 and SRT files.
      --noinfo              If chosen, then run with NO INFO logging (less debugging).
 
-In normal operation, ``convert_mp4movie_to_mkv`` losslessly converts an MP4_ movie file, and where possible includes an SRT_ file, into an MKV_ movie file. It requires the ``--mp4`` argument (name of the movie file); the `-n`` or ``--name`` (name of the released movie) argument; and the ``-y`` or ``--year`` (year in which the movie was released) argument. Here are what the following optional arguments do,
+In normal operation, |convert_mp4movie_to_mkv| losslessly converts an MP4_ movie file, and where possible includes an SRT_ file, into an MKV_ movie file. It requires the ``--mp4`` argument (name of the movie file); the ``-n`` or ``--name`` (name of the released movie) argument; and the ``-y`` or ``--year`` (year in which the movie was released) argument. Here are what the following optional arguments do,
 
 * ``--srt`` includes an SRT_ English subtitle file into the final MKV_ movie file.
 
@@ -47,9 +47,9 @@ In normal operation, ``convert_mp4movie_to_mkv`` losslessly converts an MP4_ mov
 
 * ``--noinfo`` operates with less debugging info.
 
-Finally, the ``transform`` option will transcode the movie, using HandBrakeCLI_, to a specific psychovisual quality. This is the help output in this mode, when running ``convert_mp4movie_to_mkv transform -h``,
+Finally, the |transform| option will transcode the movie, using HandBrakeCLI_, to a specific psychovisual quality. This is the help output in this mode, when running ``convert_mp4movie_to_mkv transform -h``,
 
-.. code-block:: bash
+.. code-block:: console
 
    usage: convert_mp4movie_to_mkv transform [-h] [-q QUALITY]
 
@@ -70,6 +70,10 @@ The default quality is 26. Higher numbers means smaller files but lower video qu
 .. _MKV: https://en.wikipedia.org/wiki/Matroska
 .. _mutagen: https://mutagen.readthedocs.io
 .. _pip: https://pip.pypa.io
-.. _plexstuff: https://github.com/tanimislam/plexstuff
+.. _Howdy: https://github.com/tanimislam/howdy
 .. _Plex: https://plex.tv
 .. _SRT: https://en.wikipedia.org/wiki/SubRip
+.. _`howdy.readthedocs.io`: https://howdy.readthedocs.io
+
+.. |transform| replace:: ``transform``
+.. |convert_mp4movie_to_mkv| replace:: ``convert_mp4movie_to_mkv``

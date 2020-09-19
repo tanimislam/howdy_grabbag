@@ -1,6 +1,7 @@
 """
 This converts an MP4 movie, with SRT file, and name and year into an MKV file with English subtitles.
 
+19-09-2020: rename all dependencies to howdy from plexstuff
 12-05-2020: put into plexstuff_grabbag repo
 20-10-2019: now can use HandBrakeCLI to convert the MP4 movie file to an MKV file that is smaller
 

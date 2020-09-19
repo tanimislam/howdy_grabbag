@@ -2,7 +2,7 @@ __author__ = 'Tanim Islam'
 __email__ = 'tanim.islam@gmail.com'
 
 import os, sys
-from plexstuff.plexcore import plexcore
+from howdy.core import core
 
 # code to handle Ctrl+C, convenience method for command line tools
 def signal_handler( signal, frame ):
