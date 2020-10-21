@@ -14,7 +14,20 @@ import uuid, logging, subprocess
 from distutils.spawn import find_executable
 from argparse import ArgumentParser
 
-ffmpeg_exec = find_executable( 'ffmpeg' )
+def _find_ffmpeg_exec( ):
+    ffmpeg_exec = find_executable( 'ffmpeg' )
+    if ffmpeg_exec is None: return None
+    #
+    ## now check if we can execute on it
+    if os.access( ffmpeg_exec, os.X_OK ): return ffmpeg_exec
+    #
+    ## otherwise look in /usr/bin
+    ffmpeg_exec = find_executable( 'ffmpeg', path='/usr/bin')
+    if ffmpeg_exec is None: return None
+    if os.access( ffmpeg_exec, os.X_OK ): return ffmpeg_exec
+    return None   
+
+ffmpeg_exec = _find_ffmpeg_exec( )
 mkvmerge_exec = find_executable( 'mkvmerge' )
 hcli_exec = find_executable( 'HandBrakeCLI' )
 assert( all(map(lambda exec_f: exec_f is not None,
@@ -90,21 +103,26 @@ def create_mkv_file( mp4movie, name, year,
             os.path.expanduser( outdir ),
             '%s (%d).mkv' % ( titlecase.titlecase( name ), year ) ) )
     put_info_mp4movie( mp4movie, name, year )
+    logging.debug( 'FFMPEG COMMAND: %s' % ' '.join(
+        [ ffmpeg_exec, '-y', '-i', mp4movie,
+         '-codec', 'copy', "file:%s" % newfile ] ) )
     proc = subprocess.Popen(
-        [
-            ffmpeg_exec, '-y', '-i', mp4movie,
-            '-codec', 'copy', "file:%s" % newfile ],
+        [ ffmpeg_exec, '-y', '-i', mp4movie,
+         '-codec', 'copy', "file:%s" % newfile ],
         stdout = subprocess.PIPE,
         stderr = subprocess.STDOUT )
     stdout_val, stderr_val = proc.communicate( )
     #
     if srtfile is not None:
         tmpmkv = '%s.mkv' % '-'.join( str( uuid.uuid4( ) ).split('-')[:2] )
+        logging.debug( 'MKV COMMAND: %s.' % ' '.join(
+             [ mkvmerge_exec, '-o', tmpmkv, newfile,
+             '--language', '0:eng',
+             '--track-name', '0:English', srtfile ] ) )
         proc = subprocess.Popen(
-            [
-                mkvmerge_exec, '-o', tmpmkv, newfile,
-                '--language', '0:eng',
-                '--track-name', '0:English', srtfile ],
+            [ mkvmerge_exec, '-o', tmpmkv, newfile,
+             '--language', '0:eng',
+             '--track-name', '0:English', srtfile ],
             stdout = subprocess.PIPE,
             stderr = subprocess.STDOUT )
         stdout_val, stderr_val = proc.communicate( )
