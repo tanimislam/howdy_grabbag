@@ -146,7 +146,7 @@ def main( ):
     parser.add_argument( '-y', '--year', type=int, action='store',
                        help = 'Year in which the movie was aired.', required = True )
     parser.add_argument(
-        '--outdir', dest='outdir', action='store', type=str, default = os.getcwd( ),
+        '-o', '--outdir', dest='outdir', action='store', type=str, default = os.getcwd( ),
         help = 'The directory into which we save the final MKV file. Default is %s.' % os.getcwd( ) )
     parser.add_argument(
         '--keep', dest='do_delete', action='store_false', default = True,
