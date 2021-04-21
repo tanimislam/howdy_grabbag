@@ -47,8 +47,7 @@ setup(
     ## requirements
     install_requires = [
         'tabulate',
-        'mutagen',
-        'howdy @ git+https://github.com/tanimislam/howdy.git@master' ],
+        'mutagen', ],
     python_requires = '>=3.5',
     #
     ## the executables I am creating
