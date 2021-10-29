@@ -54,6 +54,7 @@ setup(
     entry_points = {
         'console_scripts' : [
             'convert_mp4movie_to_mkv = howdy_grabbag.cli.convert_mp4movie_to_mkv:main',
+            'fix_permissions = howdy_grabbag.cli.fix_permissions:main',
             ]
     },
 )
