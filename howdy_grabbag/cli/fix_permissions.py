@@ -18,7 +18,7 @@ def fix_permissions( dirname ):
 def main( ):
     parser = ArgumentParser( )
     parser.add_argument('-d', '--dir', dest='dir', type=str, action='store', default = os.getcwd( ),
-                        help = 'Name fo the directory under which to fix permissions. Default is %s.' %
+                        help = 'Name for the directory under which to fix permissions. Default is %s.' %
                         os.getcwd( ) )
     args = parser.parse_args( )
     dirname = os.path.expanduser( args.dir )
