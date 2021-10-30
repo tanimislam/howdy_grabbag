@@ -11,7 +11,7 @@ Installing this software is unusual but straightforward. Just run this command, 
 
    pip3 install --user --upgrade git+https://github.com/tanimislam/howdy_grabbag#egg=howdy_grabbag
 
-And then these executables (`convert_mp4movie_to_mkv <convert_mp4movie_to_mkv_label_>`_ for now), will live in ``~/.local/bin``.
+And then these executables (`convert_mp4movie_to_mkv <convert_mp4movie_to_mkv_label_>`_ and `fix_permissions <fix_permissions_label_>`_ for now), will live in ``~/.local/bin``.
 
 The documentation starts with a description of each command line tool in this README, and grows from there. As this repository evolves, the documentation *may* become more organized. Right now, it is what it is.
 
@@ -68,6 +68,8 @@ Finally, the |transform| option will transcode the movie, using HandBrakeCLI_, t
 			   The quality of the conversion that HandBrakeCLI uses. Default is 26.
 
 The default quality is 26. Higher numbers means smaller files but lower video quality, and lower numbers mean larger files (in some cases, can be larger in size than the input file) but generally higher video quality.
+
+.. _fix_permissions_label:
 
 fix_permissions
 ^^^^^^^^^^^^^^^^^^^^^^^^
