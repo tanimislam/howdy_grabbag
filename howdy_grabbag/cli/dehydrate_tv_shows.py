@@ -8,7 +8,7 @@ This can *either* tell a table of TV show data on your locally running Plex_ ser
 .. _Plex: https://plex.tv
 .. _HEVC: https://en.wikipedia.org/wiki/High_Efficiency_Video_Coding
 """
-import os, sys, logging, time, pandas, numpy, json, subprocess
+import os, sys, logging, time, pandas, numpy, json, subprocess, shutil
 from howdy.core import core, session
 from howdy.tv import tv, get_token, tv_attic, get_tvdb_api, TMDBShowIds
 from howdy.music import music
@@ -211,7 +211,7 @@ def main( ):
     ## list TV shows
     if args.choose_option == 'list':
         df_shows = summarize_shows_dataframe( df_sub )
-        print( 'found %d shows and %d episodes with episodes >= %d k2bps.' % (
+        print( 'found %d shows and %d episodes with episodes >= %d kbps.' % (
             len( df_shows ), df_shows['num episodes'].sum( ), args.minbitrate ) )
         data = list(zip( list(df_shows.shows), list( df_shows['num episodes'] ),
                         list( df_shows[ 'min kbps' ] ), list( df_shows[ 'med kbps' ] ),
