@@ -56,6 +56,7 @@ setup(
             'convert_mp4movie_to_mkv = howdy_grabbag.cli.convert_mp4movie_to_mkv:main',
             'fix_permissions = howdy_grabbag.cli.fix_permissions:main',
             'dehydrate_tv_shows = howdy_grabbag.cli.dehydrate_tv_shows:main',
+            'deavify_tv_shows = howdy_grabbag.cli.dehydrate_tv_shows:main_avis',
             ]
     },
 )

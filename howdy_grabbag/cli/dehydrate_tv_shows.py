@@ -9,6 +9,7 @@ This can *either* tell a table of TV show data on your locally running Plex_ ser
 .. _HEVC: https://en.wikipedia.org/wiki/High_Efficiency_Video_Coding
 """
 import os, sys, logging, time, pandas, numpy, json, subprocess, shutil
+from enum import Enum
 from howdy.core import core, session
 from howdy.tv import tv, get_token, tv_attic, get_tvdb_api, TMDBShowIds
 from howdy.music import music
@@ -32,8 +33,19 @@ def get_tv_library_local( library_name = 'TV Shows' ):
         library_name, token = token, num_threads = cpu_count( ) )
     return tvdata
 
-def get_all_durations_dataframe( tvdata, min_bitrate = 2000 ):
-    assert( min_bitrate >= 2000 )
+class DATAFORMAT( Enum ):
+    IS_AVI_OR_MPEG = 1
+    IS_LATER = 2
+
+    @classmethod
+    def check_format( cls, fullpath ):
+        basename = os.path.basename( fullpath ).lower( )
+        if any( map(lambda suffix: basename.endswith( '.%s' % suffix ), ( 'avi', 'mpg', 'mpeg' ) ) ):
+            return DATAFORMAT.IS_AVI_OR_MPEG
+        return DATAFORMAT.IS_LATER
+
+def get_all_durations_dataframe( tvdata, min_bitrate = 2000, mode_dataformat = DATAFORMAT.IS_LATER ):
+    if mode_dataformat == DATAFORMAT.IS_LATER: assert( min_bitrate >= 2000 )
     sizes = [ ]
     durations = [ ]
     shows = [ ]
@@ -41,16 +53,20 @@ def get_all_durations_dataframe( tvdata, min_bitrate = 2000 ):
     epnos = [ ]
     names = [ ]
     paths = [ ]
+    
     for show in tvdata:
         for seasno in tvdata[show]['seasons']:
             for epno in tvdata[show]['seasons'][seasno]['episodes']:
+                mypath = tvdata[show]['seasons'][seasno]['episodes'][epno]['path']
+                if mode_dataformat != DATAFORMAT.check_format( mypath ):
+                    continue
                 durations.append( tvdata[show]['seasons'][seasno]['episodes'][epno]['duration'])
                 sizes.append( tvdata[show]['seasons'][seasno]['episodes'][epno]['size'] )
                 shows.append( show )
                 seasons.append( seasno )
                 epnos.append( epno )
                 names.append( tvdata[show]['seasons'][seasno]['episodes'][epno]['title'] )
-                paths.append( tvdata[show]['seasons'][seasno]['episodes'][epno]['path'] )
+                paths.append( mypath )
     df = pandas.DataFrame({'sizes (MB)' : numpy.array(sizes)/1024**2, 'durations (s)' : durations,
                            'shows' : shows, 'seasons' : seasons, 'epnos' : epnos, 'names' : names,
                           'paths' : paths })
@@ -147,7 +163,9 @@ def process_single_show( df_sub, showname, do_hevc = True, qual = 28 ):
         stdout_val = subprocess.check_output([
             nice_exec, '-n', '19', hcli_exec,
             '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-B', '160',
-            '-s', ','.join(map(lambda num: '%d' % num, range(1,35))), '-o', newfile ],
+            '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
+            '-s', ','.join(map(lambda num: '%d' % num, range(1,35))),
+            '-o', newfile ],
             stderr = subprocess.PIPE )
         #
         os.chmod(newfile, 0o644 )
@@ -236,3 +254,50 @@ def main( ):
         assert( quality >= 20 )
         process_single_show( df_sub, showname, do_hevc = args.parser_dehydrate_do_hevc,
                             qual = quality )
+
+def main_avis( ):
+    parser = ArgumentParser( )
+    #
+    ## top level arguments
+    parser.add_argument( '-t', '--tvlibrary', dest='tvlibrary', type=str, action = 'store', default = 'TV Shows',
+                        help = 'Name of the TV library on the local PLEX server. Default is "TV Shows".' )
+    parser.add_argument( '--info', dest='do_info', action='store_true', default = False,
+                        help = 'If chosen, then turn on INFO logging.' )
+    #
+    ## check on which TV shows are candidates for dehydration, or to dehydrate specific TV shows.
+    subparsers = parser.add_subparsers( help = 'Choose on whether to list the TV shows to dehydrate, or to dehydrate a TV show, that have episodes that are AVI files.',
+                                       dest = 'choose_option' )
+    parser_listcandidates = subparsers.add_parser( 'list',    help = 'If chosen, then list the TV shows to dehydrate (ones that have AVI file episodes).' )
+    parser_dehydrate      = subparsers.add_parser( 'deavify', help = 'If chosen, then deavify a single TV show.' )
+    #
+    ## list TV shows, do nothing more
+    #
+    ## deavify a single TV show
+    parser_deavify.add_argument( '-s', '--show', metavar = 'SHOW', dest = 'parser_deavify_show', type = str, action = 'store',
+                                  required = True, help = 'Name of a TV show (with episodes to deavify).' )
+    parser_deavify.add_argument( '-I', dest = 'parser_deavify_do_info', action = 'store_true', default = False,
+                                  help = 'If chosen, then only print out info on the selected TV show.' )
+    parser_deavify.add_argument( '-Q', '--quality', dest = 'parser_deavify_quality', metavar = 'QUALITY', type = int, action = 'store',
+                                  default = 21, help = 'Will deavify shows using HEVC video codec with this quality. Default is 21. Must be >= 18.' )
+    #
+    ## parsing arguments
+    time0 = time.perf_counter( )
+    args = parser.parse_args( )
+    logger = logging.getLogger( )
+    if args.do_info: logger.setLevel( logging.INFO )
+    df_sub = get_all_durations_dataframe(
+        get_tv_library_local( library_name = args.tvlibrary ),
+        min_bitrate = 0.0, mode_dataformat = DATAFORMAT.IS_AVI_OR_MPEG )
+    shownames = set( df_sub.shows )
+    #
+    ## list TV shows
+    if args.choose_option == 'list':
+        df_shows = summarize_shows_dataframe( df_sub )
+        print( 'found %d shows and %d AVI episodes.' % (
+            len( df_shows ), df_shows['num episodes'].sum( ) ) )
+        data = list(zip( list(df_shows.shows), list( df_shows['num episodes'] ),
+                        list( df_shows[ 'min kbps' ] ), list( df_shows[ 'med kbps' ] ),
+                        list( df_shows[ 'max kbps' ] ) ) )
+        print( '%s\n' % tabulate( data, headers = [ 'SHOW', 'NUM EPISODES', 'MIN KBPS', 'MED KBPS', 'MAX KPBS' ] ) )
+        print( 'took %0.3f seconds to process.' % ( time.perf_counter( ) - time0 ) )
+        return
