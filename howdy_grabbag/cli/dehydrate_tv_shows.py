@@ -8,7 +8,7 @@ This can *either* tell a table of TV show data on your locally running Plex_ ser
 .. _Plex: https://plex.tv
 .. _HEVC: https://en.wikipedia.org/wiki/High_Efficiency_Video_Coding
 """
-import os, sys, logging, time, pandas, numpy, json, subprocess, shutil
+import os, sys, logging, time, pandas, numpy, json, subprocess, shutil, re
 from enum import Enum
 from howdy.core import core, session
 from howdy.tv import tv, get_token, tv_attic, get_tvdb_api, TMDBShowIds
@@ -94,9 +94,11 @@ def summarize_shows_dataframe( df_sub ):
     df = df.sort_values( 'num episodes', ascending = False ).copy( )
     return df
 
-def single_show_summary_dataframe( df_sub, showname ):
+def single_show_summary_dataframe( df_sub, showname, mode_dataformat = DATAFORMAT.IS_LATER ):
     df_show = df_sub[ df_sub.shows == showname ].copy( )
     assert( len( df_show ) != 0 )
+    if mode_dataformat == DATAFORMAT.IS_AVI_OR_MPEG:
+        return df_show
     #
     def get_ffprobe_json( filename ):
         stdout_val = subprocess.check_output(
@@ -118,8 +120,8 @@ def single_show_summary_dataframe( df_sub, showname ):
                                         list( df_show.paths ) ) )
         return df_show
 
-def summarize_single_show( df_sub, showname, minbitrate ):
-    df_show = single_show_summary_dataframe( df_sub, showname )
+def summarize_single_show( df_sub, showname, minbitrate, mode_dataformat = DATAFORMAT.IS_LATER ):
+    df_show = single_show_summary_dataframe( df_sub, showname, mode_dataformat = mode_dataformat )
     #
     ## now report it out
     print( 'information for %s, which has %d episodes >= %d kbps.\n' % ( showname, len( df_show ), minbitrate ) )
@@ -127,6 +129,10 @@ def summarize_single_show( df_sub, showname, minbitrate ):
     data.append( [ 'MIN KBPS', df_show[ 'bitrate (kbps)' ].min( ) ] )
     data.append( [ 'MED KBPS', numpy.median( df_show[ 'bitrate (kbps)' ] ) ] )
     data.append( [ 'MAX KBPS', df_show[ 'bitrate (kbps)' ].max( ) ] )
+    if mode_dataformat == DATAFORMAT.IS_AVI_OR_MPEG:
+        print( '%s\n' % tabulate( data, headers = [ 'PARAMETER', 'INFO' ] ) )
+        return
+    #
     if len( df_show[ df_show[ 'is hevc' ] == True ] ) == 0:
         print( '%s\n' % tabulate( data, headers = [ 'PARAMETER', 'INFO' ] ) )
         return
@@ -182,7 +188,50 @@ def process_single_show( df_sub, showname, do_hevc = True, qual = 28 ):
     list_processed.append( 'took %0.3f seconds to process %d episodes' % (
         dt00, len( episodes_sorted ) ) )
     json.dump( list_processed, open( 'processed_stuff.json', 'w' ), indent = 1 )
-    
+
+def process_single_show_avi( df_sub, showname, qual = 20 ):
+    #
+    ## check we have nice and HandBrakeCLI
+    nice_exec = find_executable( 'nice' )
+    hcli_exec = find_executable( 'HandBrakeCLI' )
+    assert( nice_exec is not None )
+    assert( hcli_exec is not None )
+    #
+    df_show_sub = single_show_summary_dataframe(
+        df_sub, showname, mode_dataformat = DATAFORMAT.IS_AVI_OR_MPEG )
+    #
+    ## now process those shows SLOWLY
+    time00 = time.perf_counter( )
+    df_show_sorted = df_show_sub.sort_values(by=['seasons', 'epnos']).reset_index( )
+    episodes_sorted = list( df_show_sorted.paths )
+    list_processed = [ ]
+    for idx, filename in enumerate(episodes_sorted):
+        time0 = time.perf_counter( )
+        dirname = os.path.dirname( filename )
+        newfile = re.sub( '\.avi$', '.mkv', os.path.basename( filename ) )
+        stdout_val = subprocess.check_output([
+            nice_exec, '-n', '19', hcli_exec,
+            '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-B', '160',
+            '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
+            '-o', newfile ],
+            stderr = subprocess.PIPE )
+        #
+        os.chmod(newfile, 0o644 )
+        shutil.move( newfile, dirname )
+        os.remove( filename )
+        dt0 = time.perf_counter( ) - time0
+        print('processed episode %02d / %02d in %0.3f seconds' % (
+            idx + 1, len( episodes_sorted ), dt0 ) )
+        list_processed.append( 'processed episode %02d / %02d in %0.3f seconds' % (
+            idx + 1, len( episodes_sorted ), dt0 ) )
+        json.dump( list_processed, open( 'processed_stuff_avi.json', 'w' ), indent = 1 )
+    dt00 = time.perf_counter( ) - time00
+    print( 'took %0.3f seconds to process %d episodes' % (
+        dt00, len( episodes_sorted ) ) )
+    list_processed.append( 'took %0.3f seconds to process %d episodes' % (
+        dt00, len( episodes_sorted ) ) )
+    json.dump( list_processed, open( 'processed_stuff_avi.json', 'w' ), indent = 1 )
+        
 
 def main( ):
     parser = ArgumentParser( )
@@ -264,11 +313,11 @@ def main_avis( ):
     parser.add_argument( '--info', dest='do_info', action='store_true', default = False,
                         help = 'If chosen, then turn on INFO logging.' )
     #
-    ## check on which TV shows are candidates for dehydration, or to dehydrate specific TV shows.
-    subparsers = parser.add_subparsers( help = 'Choose on whether to list the TV shows to dehydrate, or to dehydrate a TV show, that have episodes that are AVI files.',
+    ## check on which TV shows are candidates for dehydration, or to deavify specific TV shows.
+    subparsers = parser.add_subparsers( help = 'Choose on whether to list the TV shows to deavify, or to deavify a TV show, that have episodes that are AVI files.',
                                        dest = 'choose_option' )
-    parser_listcandidates = subparsers.add_parser( 'list',    help = 'If chosen, then list the TV shows to dehydrate (ones that have AVI file episodes).' )
-    parser_dehydrate      = subparsers.add_parser( 'deavify', help = 'If chosen, then deavify a single TV show.' )
+    parser_listcandidates = subparsers.add_parser( 'list',    help = 'If chosen, then list the TV shows to deavify (ones that have AVI file episodes).' )
+    parser_deavify      = subparsers.add_parser( 'deavify', help = 'If chosen, then deavify a single TV show.' )
     #
     ## list TV shows, do nothing more
     #
@@ -301,3 +350,19 @@ def main_avis( ):
         print( '%s\n' % tabulate( data, headers = [ 'SHOW', 'NUM EPISODES', 'MIN KBPS', 'MED KBPS', 'MAX KPBS' ] ) )
         print( 'took %0.3f seconds to process.' % ( time.perf_counter( ) - time0 ) )
         return
+    #
+    ## deavify single show
+    elif args.choose_option == 'deavify':
+        showname = args.parser_deavify_show
+        assert( showname in shownames )
+        #
+        ## just do info then return
+        if args.parser_deavify_do_info:
+            summarize_single_show( df_sub, showname, 0.0, mode_dataformat = DATAFORMAT.IS_AVI_OR_MPEG )
+            print( 'took %0.3f seconds to process.' % ( time.perf_counter( ) - time0 ) )
+            return
+        #
+        ## now the big thing
+        quality = args.parser_deavify_quality
+        assert( quality >= 20 )
+        process_single_show_avi( df_sub, showname, qual = quality )   
