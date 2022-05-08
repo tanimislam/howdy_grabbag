@@ -8,7 +8,7 @@ This can *either* tell a table of TV show data on your locally running Plex_ ser
 .. _Plex: https://plex.tv
 .. _HEVC: https://en.wikipedia.org/wiki/High_Efficiency_Video_Coding
 """
-import os, sys, logging, time, pandas, numpy, json, subprocess, shutil, re
+import os, sys, logging, time, pandas, numpy, json, subprocess, shutil, re, redis
 from enum import Enum
 from howdy.core import core, session
 from howdy.tv import tv, get_token, tv_attic, get_tvdb_api, TMDBShowIds
@@ -205,25 +205,36 @@ def process_single_show_avi( df_sub, showname, qual = 20 ):
     df_show_sorted = df_show_sub.sort_values(by=['seasons', 'epnos']).reset_index( )
     episodes_sorted = list( df_show_sorted.paths )
     list_processed = [ ]
+    #
+    ## first go through redis database to see if shows are running
     for idx, filename in enumerate(episodes_sorted):
         time0 = time.perf_counter( )
         dirname = os.path.dirname( filename )
         newfile = re.sub( '\.avi$', '.mkv', os.path.basename( filename ) )
-        stdout_val = subprocess.check_output([
-            nice_exec, '-n', '19', hcli_exec,
-            '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-B', '160',
-            '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
-            '-o', newfile ],
-            stderr = subprocess.PIPE )
-        #
-        os.chmod(newfile, 0o644 )
-        shutil.move( newfile, dirname )
-        os.remove( filename )
-        dt0 = time.perf_counter( ) - time0
-        print('processed episode %02d / %02d in %0.3f seconds' % (
-            idx + 1, len( episodes_sorted ), dt0 ) )
-        list_processed.append( 'processed episode %02d / %02d in %0.3f seconds' % (
-            idx + 1, len( episodes_sorted ), dt0 ) )
+        try:
+            stdout_val = subprocess.check_output([
+                nice_exec, '-n', '19', hcli_exec,
+                '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-B', '160',
+                '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
+                '-o', newfile ],
+                stderr = subprocess.PIPE )
+            #
+            os.chmod(newfile, 0o644 )
+            shutil.move( newfile, dirname )
+            os.remove( filename )
+            dt0 = time.perf_counter( ) - time0
+            print('processed episode %02d / %02d in %0.3f seconds' % (
+                idx + 1, len( episodes_sorted ), dt0 ) )
+            list_processed.append( 'processed episode %02d / %02d in %0.3f seconds' % (
+                idx + 1, len( episodes_sorted ), dt0 ) )
+        except:
+            try: os.remove( newfile )
+            except: pass
+            dt0 = time.perf_counter( ) - time0
+            print('failed episode %02d / %02d in %0.3f seconds' % (
+                idx + 1, len( episodes_sorted ), dt0 ) )
+            list_processed.append( 'failed episode %02d / %02d in %0.3f seconds' % (
+                idx + 1, len( episodes_sorted ), dt0 ) )
         json.dump( list_processed, open( 'processed_stuff_avi.json', 'w' ), indent = 1 )
     dt00 = time.perf_counter( ) - time00
     print( 'took %0.3f seconds to process %d episodes' % (
