@@ -1,16 +1,20 @@
 import os, sys, time, subprocess, glob
 from distutils.spawn import find_executable
 
-def process_mp4_srt_eps_to_mkv( epdicts, series_name, seasno = 1, srtglob = '*.srt' ):
+def process_mp4_srt_eps_to_mkv(
+    epdicts, series_name, seasno = 1, srtglob = '*.srt',
+    ffmpeg_exec = find_executable( 'ffmpeg' ),
+    mkvmerge_exec = find_executable( 'mkvmerge' ) ):
     mp4files = sorted(glob.glob( '*.mp4'))
     srtfiles = sorted(glob.glob( srtglob ) )
     assert( len(mp4files) == len(srtfiles))
     epdicts_max = set(map(lambda idx: idx + 1, range(len(mp4files))))
     assert( len( epdicts_max - set( epdicts[ seasno ] ) ) == 0 )
-    ffmpeg_exec   = find_executable( 'ffmpeg' )
-    mkvmerge_exec = find_executable( 'mkvmerge' )
+    #ffmpeg_exec   = find_executable( 'ffmpeg' )
+    #mkvmerge_exec = find_executable( 'mkvmerge' )
     assert( ffmpeg_exec is not None )
     assert( mkvmerge_exec is not None )
+    assert( all(map(os.path.exists, ( ffmpeg_exec, mkvmerge_exec ) ) ) )
     #
     time00 = time.perf_counter( )
     for idx, tup in enumerate(zip( mp4files, srtfiles ) ):
