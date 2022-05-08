@@ -1,4 +1,4 @@
-import os, sys, time, subprocess
+import os, sys, time, subprocess, glob
 from distutils.spawn import find_executable
 
 def process_mp4_srt_eps_to_mkv( epdicts, series_name, seasno = 1, srtglob = '*.srt' ):
