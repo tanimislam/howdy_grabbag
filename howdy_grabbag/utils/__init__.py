@@ -1,8 +1,8 @@
 import os, sys, time, subprocess
 from distutils.spawn import find_executable
 
-def process_mp4_srt_eps_to_mkv( dirname, epdicts, series_name, seasno = 1, srtglob = '*.srt' ):
-    mp4files = sorted(glob.glob('*.mp4'))
+def process_mp4_srt_eps_to_mkv( epdicts, series_name, seasno = 1, srtglob = '*.srt' ):
+    mp4files = sorted(glob.glob( '*.mp4'))
     srtfiles = sorted(glob.glob( srtglob ) )
     assert( len(mp4files) == len(srtfiles))
     epdicts_max = set(map(lambda idx: idx + 1, range(len(mp4files))))
