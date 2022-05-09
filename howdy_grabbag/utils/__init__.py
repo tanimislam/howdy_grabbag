@@ -1,6 +1,13 @@
-import os, sys, time, subprocess, glob
+import os, sys, time, subprocess, glob, json, titlecase
 from distutils.spawn import find_executable
 
+def create_epdicts_from_jsonfile( jsonfile ):
+    assert( os.path.exists( jsonfile ) )
+    epdicts_sub = json.load( open( jsonfile, 'r' ) )
+    epdicts = { int(seasno) : { int(idx) : titlecase.titlecase( epdicts_sub[seasno][idx] )
+                               for idx in epdicts_sub[seasno] } for seasno in epdicts_sub }
+    return epdicts
+    
 def process_mp4_srt_eps_to_mkv(
     epdicts, series_name, seasno = 1, srtglob = '*.srt',
     ffmpeg_exec = find_executable( 'ffmpeg' ),
