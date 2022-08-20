@@ -47,7 +47,9 @@ setup(
     ## requirements
     install_requires = [
         'tabulate',
-        'mutagen', ],
+        'mutagen',
+        'howdy',
+        'redis', ],
     python_requires = '>=3.5',
     #
     ## the executables I am creating
