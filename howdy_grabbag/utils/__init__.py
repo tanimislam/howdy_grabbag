@@ -44,7 +44,7 @@ def process_mp4_srt_eps_to_mkv(
         epno = idx + starteps
         mp4file, srtfile = tup
         newfile = '%s - s%02de%02d - %s.mkv' % (
-            series_name, seasno, epno, epdicts[seasno][epno] )
+            series_name, seasno, epno, epdicts[seasno][epno].replace( '/', ', ' ) )
         stdout_val = subprocess.check_output([
             ffmpeg_exec, '-y', '-i', mp4file, '-codec', 'copy', 'file:%s' % newfile ],
                                              stderr = subprocess.PIPE )
