@@ -11,7 +11,7 @@ def create_epdicts_from_jsonfile( jsonfile ):
 def rename_files_in_directory( epdicts, series_name, seasno = 1 ):
     time0 = time.perf_counter( )
     filedict = { idx + 1:filename for (idx, filename) in enumerate(
-        sorted(glob.glob('*mp4') + glob.glob("*.avi") + glob.glob("*.mkv"))) }
+        sorted(glob.glob('*mp4') + glob.glob("*.avi") + glob.glob("*.mkv") + glob.glob('*.wmv'))) }
     assert( seasno in epdicts )
     assert( len( set( epdicts[ seasno ] ) - set( filedict ) ) == 0 )
     for epno in sorted( filedict ):
