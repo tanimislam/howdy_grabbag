@@ -31,7 +31,7 @@ def _get_hevc_bitrate( filename ):
     try:
         data = _get_ffprobe_json( filename )
         info = {
-            'is HEVC' :  data['streams'][0]['codec_name'].lower( ) == 'hevc',
+            'is_hevc' :  data['streams'][0]['codec_name'].lower( ) == 'hevc',
             'bit_rate_kbps' : float( data['format']['bit_rate' ] ) / 1_024, }
         return info
     except: return None
