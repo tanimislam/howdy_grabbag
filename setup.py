@@ -59,6 +59,7 @@ setup(
             'fix_permissions = howdy_grabbag.cli.fix_permissions:main',
             'dehydrate_tv_shows = howdy_grabbag.cli.dehydrate_tv_shows:main',
             'deavify_tv_shows = howdy_grabbag.cli.dehydrate_tv_shows:main_avis',
+            'dehydrate_directory = howdy_grabbag.cli.dehydrate_directory:main',
             ]
     },
 )

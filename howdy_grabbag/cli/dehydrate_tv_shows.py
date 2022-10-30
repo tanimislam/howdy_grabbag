@@ -16,11 +16,11 @@ from howdy.music import music
 from howdy.movie import tmdb_apiKey
 from pathos.multiprocessing import Pool, cpu_count
 from tabulate import tabulate
-from distutils.spawn import find_executable
+from shutil import which
 from argparse import ArgumentParser
 
-_ffmpeg_exec  = find_executable( 'ffmpeg' )
-_ffprobe_exec = find_executable( 'ffprobe' )
+_ffmpeg_exec  = which( 'ffmpeg' )
+_ffprobe_exec = which( 'ffprobe' )
 assert( _ffmpeg_exec is not None )
 assert( _ffprobe_exec is not None )
 
@@ -148,8 +148,8 @@ def summarize_single_show( df_sub, showname, minbitrate, mode_dataformat = DATAF
 def process_single_show( df_sub, showname, do_hevc = True, qual = 28 ):
     #
     ## check we have nice and HandBrakeCLI
-    nice_exec = find_executable( 'nice' )
-    hcli_exec = find_executable( 'HandBrakeCLI' )
+    nice_exec = which( 'nice' )
+    hcli_exec = which( 'HandBrakeCLI' )
     assert( nice_exec is not None )
     assert( hcli_exec is not None )
     #
@@ -192,8 +192,8 @@ def process_single_show( df_sub, showname, do_hevc = True, qual = 28 ):
 def process_single_show_avi( df_sub, showname, qual = 20 ):
     #
     ## check we have nice and HandBrakeCLI
-    nice_exec = find_executable( 'nice' )
-    hcli_exec = find_executable( 'HandBrakeCLI' )
+    nice_exec = which( 'nice' )
+    hcli_exec = which( 'HandBrakeCLI' )
     assert( nice_exec is not None )
     assert( hcli_exec is not None )
     #
