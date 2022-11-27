@@ -1,9 +1,9 @@
-import os, sys, numpy, mutagen.mp4, requests, yt_dlp, time, datetime, magic, io
+import os, sys, numpy, mutagen.mp4, requests, yt_dlp, time, datetime, magic, io, logging
 from enum import Enum
 from PIL import Image
 from argparse import ArgumentParser
 #
-from howdy.music.music import get_youtube_file, fill_m4a_data
+from howdy.music.music import fill_m4a_metadata, get_youtube_file
 
 class IMAGETYPE( Enum ):
     IS_JPEG = 1
@@ -19,12 +19,11 @@ class IMAGETYPE( Enum ):
 
 def download_compilation_song(
         input_data, album_cover_filename, youtube_URL ):
-    album_cover_filename = input_data[ 'album cover filename ']
     song =   '-'.join(map(lambda tok: tok.strip( ), input_data[ 'song' ].split('/')))
     artist = '-'.join(map(lambda tok: tok.strip( ), input_data[ 'artist' ].split('/')))
     album = input_data[ 'album' ]
-    trackno = int( input_data[ 'trackno' ] )
-    tottracks = int( input_data[ 'tottracks' ] )
+    trackno = input_data[ 'trackno' ]
+    tottracks = input_data[ 'tottracks' ]
     assert( trackno > 0 )
     assert( tottracks > 0 )
     assert( tottracks >= trackno )
@@ -33,7 +32,6 @@ def download_compilation_song(
     assert( len( year_string_split ) > 0 )
     year_string = '-'.join( year_string_split )
     #
-    album_cover_filename = 
     assert( os.path.exists( album_cover_filename ) )
     val = IMAGETYPE.check_format( album_cover_filename )
     if val == IMAGETYPE.IS_INVALID:
@@ -46,7 +44,7 @@ def download_compilation_song(
     fill_m4a_metadata(
         outputfile,
         { 'song' : song, 'album' : album, 'artist' : artist, 'year' : year_string,
-          'tracknumber' : trackno, 'tottracks' : tottracks } )
+          'tracknumber' : trackno, 'total tracks' : tottracks, 'album url' : '', } )
     #
     mp4tags = mutagen.mp4.MP4( outputfile )
     mp4tags[ 'aART' ] =[ 'Various Artists', ]
@@ -80,5 +78,14 @@ def main( ):
                          help = 'The YouTube URL of the song in the compilation album.' )
     #
     args = parser.parse_args( )
-    
-    
+    #
+    input_data = {
+        'song' : args.song,
+        'artist' : args.artist,
+        'album' : args.album,
+        'trackno' : args.trackno,
+        'tottracks' : args.tottracks,
+        'year string' : args.year_string, }
+    #
+    download_compilation_song(
+        input_data, args.album_cover_filename, args.youtube_URL )
