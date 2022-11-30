@@ -1,9 +1,11 @@
-import os, sys, numpy, mutagen.mp4, requests, yt_dlp, time, datetime, magic, io, logging
+import os, sys, numpy, mutagen.mp4, requests, yt_dlp, time, datetime, magic, io, logging, validators
 from enum import Enum
+from io import BytesIO
 from PIL import Image
 from argparse import ArgumentParser
 #
-from howdy.music.music import fill_m4a_metadata, get_youtube_file
+from howdy.music.music import get_youtube_file
+from howdy.music import fill_m4a_metadata
 
 class IMAGETYPE( Enum ):
     IS_JPEG = 1
@@ -18,7 +20,7 @@ class IMAGETYPE( Enum ):
         return IMAGETYPE.IS_INVALID
 
 def download_compilation_song(
-        input_data, album_cover_filename, youtube_URL ):
+        input_data, album_cover_filename_or_URL, youtube_URL ):
     song =   '-'.join(map(lambda tok: tok.strip( ), input_data[ 'song' ].split('/')))
     artist = '-'.join(map(lambda tok: tok.strip( ), input_data[ 'artist' ].split('/')))
     album = input_data[ 'album' ]
@@ -32,36 +34,50 @@ def download_compilation_song(
     assert( len( year_string_split ) > 0 )
     year_string = '-'.join( year_string_split )
     #
+    outputfile = '%s.%s.m4a' % ( artist, song )
+    #
+    ## first check if the thing is an URL
+    if validators.url( album_cover_filename_or_URL ):
+        get_youtube_file( youtube_URL, outputfile )
+        fill_m4a_metadata(
+            outputfile,
+            { 'song' : song, 'album' : album, 'artist' : artist, 'year' : year_string,
+              'tracknumber' : trackno, 'total tracks' : tottracks, 'album url' : album_cover_filename_or_URL, } )
+        return
+    #
+    ## then must be a file
+    album_cover_filename = album_cover_filename_or_URL
     assert( os.path.exists( album_cover_filename ) )
     val = IMAGETYPE.check_format( album_cover_filename )
     if val == IMAGETYPE.IS_INVALID:
         raise ValueError("Error, %s is not a PNG or JPEG." %
                          os.path.abspath( album_cover_filename ) )
-    outputfile = '%s.%s.m4a' % ( artist, song )
     #
     get_youtube_file( youtube_URL, outputfile )
     #
     fill_m4a_metadata(
         outputfile,
-        { 'song' : song, 'album' : album, 'artist' : artist, 'year' : year_string,
-          'tracknumber' : trackno, 'total tracks' : tottracks, 'album url' : '', } )
+        data_dict = { 'song' : song, 'album' : album, 'artist' : artist, 'year' : year_string,
+                      'tracknumber' : trackno, 'total tracks' : tottracks, 'album url' : '', },
+        image_data = BytesIO( open( album_cover_filename, 'rb' ).read( ) ) )
     #
     mp4tags = mutagen.mp4.MP4( outputfile )
-    mp4tags[ 'aART' ] =[ 'Various Artists', ]
+    mp4tags[ 'aART' ] = [ 'Various Artists', ]
     mp4tags[ 'cpil' ] = True
-    with io.BytesIO( ) as csio2:
-        img = Image.open( album_cover_filename )
-        if val == IMAGETYPE.IS_PNG:
-            img.save( csio2, format = 'png' )
-            mp4tags[ 'covr' ] = [
-                mutagen.mp4.MP4Cover( csio2.getvalue( ),
-                                        mutagen.mp4.MP4Cover.FORMAT_PNG ), ]
-        else:
-            img.save( csio2, format = 'jpeg' )
-            mp4tags[ 'covr' ] = [
-                    mutagen.mp4.MP4Cover( csio2.getvalue( ),
-                                         mutagen.mp4.MP4Cover.FORMAT_JPEG ), ]
     mp4tags.save( )
+    # with io.BytesIO( ) as csio2:
+    #     img = Image.open( album_cover_filename )
+    #     if val == IMAGETYPE.IS_PNG:
+    #         img.save( csio2, format = 'png' )
+    #         mp4tags[ 'covr' ] = [
+    #             mutagen.mp4.MP4Cover( csio2.getvalue( ),
+    #                                     mutagen.mp4.MP4Cover.FORMAT_PNG ), ]
+    #     else:
+    #         img.save( csio2, format = 'jpeg' )
+    #         mp4tags[ 'covr' ] = [
+    #                 mutagen.mp4.MP4Cover( csio2.getvalue( ),
+    #                                      mutagen.mp4.MP4Cover.FORMAT_JPEG ), ]
+    # mp4tags.save( )
 
 def main( ):
     parser = ArgumentParser( )
