@@ -49,7 +49,8 @@ setup(
         'tabulate',
         'mutagen',
         'howdy',
-        'redis', ],
+        'redis',
+        'validators', ],
     python_requires = '>=3.5',
     #
     ## the executables I am creating
