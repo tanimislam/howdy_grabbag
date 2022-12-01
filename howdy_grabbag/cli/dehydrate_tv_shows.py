@@ -19,6 +19,7 @@ from tabulate import tabulate
 from shutil import which
 from argparse import ArgumentParser
 
+_MINBITRATE   = 1000
 _ffmpeg_exec  = which( 'ffmpeg' )
 _ffprobe_exec = which( 'ffprobe' )
 assert( _ffmpeg_exec is not None )
@@ -45,7 +46,7 @@ class DATAFORMAT( Enum ):
         return DATAFORMAT.IS_LATER
 
 def get_all_durations_dataframe( tvdata, min_bitrate = 2000, mode_dataformat = DATAFORMAT.IS_LATER ):
-    if mode_dataformat == DATAFORMAT.IS_LATER: assert( min_bitrate >= 2000 )
+    if mode_dataformat == DATAFORMAT.IS_LATER: assert( min_bitrate >= _MINBITRATE )
     sizes = [ ]
     durations = [ ]
     shows = [ ]
@@ -252,7 +253,7 @@ def main( ):
                         help = 'Name of the TV library on the local PLEX server. Default is "TV Shows".' )
     parser.add_argument( '-M', '--minbitrate', dest = 'minbitrate', type = int, action = 'store', default = 2000,
                         help = ' '.join([
-                            'The minimum total bitrate (in kbps) of episodes to dehydrate. Must be >= 2000 kbps.',
+                            'The minimum total bitrate (in kbps) of episodes to dehydrate. Must be >= %d kbps.' % _MINBITRATE,
                             'Default is 2000 kbps.']))
     parser.add_argument( '--info', dest='do_info', action='store_true', default = False,
                         help = 'If chosen, then turn on INFO logging.' )
@@ -278,7 +279,7 @@ def main( ):
     ## parsing arguments
     time0 = time.perf_counter( )
     args = parser.parse_args( )
-    assert( args.minbitrate >= 2000 )
+    assert( args.minbitrate >= _MINBITRATE )
     logger = logging.getLogger( )
     if args.do_info: logger.setLevel( logging.INFO )
     df_sub = get_all_durations_dataframe(
