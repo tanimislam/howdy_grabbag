@@ -43,6 +43,10 @@ def download_compilation_song(
             outputfile,
             { 'song' : song, 'album' : album, 'artist' : artist, 'year' : year_string,
               'tracknumber' : trackno, 'total tracks' : tottracks, 'album url' : album_cover_filename_or_URL, } )
+        mp4tags = mutagen.mp4.MP4( outputfile )
+        mp4tags[ 'aART' ] = [ 'Various Artists', ]
+        mp4tags[ 'cpil' ] = True
+        mp4tags.save( )
         return
     #
     ## then must be a file
@@ -64,7 +68,7 @@ def download_compilation_song(
     mp4tags = mutagen.mp4.MP4( outputfile )
     mp4tags[ 'aART' ] = [ 'Various Artists', ]
     mp4tags[ 'cpil' ] = True
-    mp4tags.save( )
+    mp4tags.save( ) 
     # with io.BytesIO( ) as csio2:
     #     img = Image.open( album_cover_filename )
     #     if val == IMAGETYPE.IS_PNG:
