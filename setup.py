@@ -19,7 +19,6 @@ setup(
     #
     ## following advice on find_packages excluding tests from https://setuptools.readthedocs.io/en/latest/setuptools.html#using-find-packages
     packages = find_packages( exclude = ["*.tests", "*.tests.*", "tests" ] ),
-    # package_dir = { "": "nprstuff" },
     url = 'https://github.com/tanimislam/howdy_grabbag',
     license = 'BSD-2-Clause',
     author = 'Tanim Islam',
@@ -50,14 +49,16 @@ setup(
         'mutagen',
         'howdy',
         'redis',
-        'validators', ],
-    python_requires = '>=3.5',
+        'validators',
+        'python-magic', ],
+    python_requires = '>=3.8',
     #
     ## the executables I am creating
     entry_points = {
         'console_scripts' : [
             'convert_mp4movie_to_mkv = howdy_grabbag.cli.convert_mp4movie_to_mkv:main',
-            'howdy_music_compilation = howdy_grabbag.cli.howdy_music_compilation:main',
+            'howdy_music_compilation = howdy_grabbag.cli.howdy_music:main_compilation',
+            'howdy_music_individual = howdy_grabbag.cli.howdy_music:main_individual',
             'fix_permissions = howdy_grabbag.cli.fix_permissions:main',
             'dehydrate_tv_shows = howdy_grabbag.cli.dehydrate_tv_shows:main',
             'deavify_tv_shows = howdy_grabbag.cli.dehydrate_tv_shows:main_avis',
