@@ -51,14 +51,15 @@ def find_files_to_process( directory_name = os.getcwd( ), do_hevc = True, min_bi
 
 def process_single_directory(
     directory_name = os.getcwd( ), do_hevc = True, min_bitrate = 2_000,
-    qual = 28 ):
+    qual = 28, output_json_file = 'processed_stuff.json' ):
+    assert( os.path.basename( output_json_file ).endswith( '.json' ) )
     fnames_dict = find_files_to_process(
         directory_name = directory_name, do_hevc = do_hevc,
         min_bitrate = min_bitrate )
     time00 = time.perf_counter( )
     list_processed = [ 'found %02d files to dehydrate in %s.' % (
         len( fnames_dict ), os.path.abspath( directory_name ) ), ]
-    json.dump( list_processed, open( 'processed_stuff.json', 'w' ), indent = 1 )
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
     for idx, filename in enumerate(sorted( fnames_dict ) ):
         time0 = time.perf_counter( )
         newfile = '%s-%s' % ( str( uuid.uuid4( ) ).split('-')[0].strip( ), os.path.basename( filename ) )
@@ -77,13 +78,13 @@ def process_single_directory(
             idx + 1, len( fnames_dict ), dt0 ) )
         list_processed.append( 'processed file %02d / %02d in %0.3f seconds' % (
             idx + 1, len( fnames_dict ), dt0 ) )
-        json.dump( list_processed, open( 'processed_stuff.json', 'w' ), indent = 1 )
+        json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
     dt00 = time.perf_counter( ) - time00
     logging.info( 'took %0.3f seconds to process %d files' % (
         dt00, len( fnames_dict ) ) )
     list_processed.append( 'took %0.3f seconds to process %d files' % (
         dt00, len( fnames_dict ) ) )
-    json.dump( list_processed, open( 'processed_stuff.json', 'w' ), indent = 1 )
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
 
 def main( ):
     parser = ArgumentParser( )
@@ -111,6 +112,8 @@ def main( ):
     ## dehydrate a single TV show
     parser_dehydrate.add_argument( '-Q', '--quality', dest = 'parser_dehydrate_quality', metavar = 'QUALITY', type = int, action = 'store',
                                   default = 28, help = 'Will dehydrate shows using HEVC video codec with this quality. Default is 28. Must be >= 20.' )
+    parser_dehydrate.add_argument( '-J', '--jsonfile', dest = 'parser_dehydrate_jsonfile', metavar = 'JSONFILE', type = str, action = 'store', default = 'processed_stuff.json',
+                                  help = 'Name of the JSON file to store progress-as-you-go-along on directory dehydration. Default file name = "processed_stuff.json".' )
     #
     ## parsing arguments
     time0 = time.perf_counter( )
@@ -136,7 +139,10 @@ def main( ):
     ## dehydrate directory
     elif args.choose_option == 'dehydrate':
         quality = args.parser_dehydrate_quality
+        jsonfile = os.path.expanduser( args.parser_dehydrate_jsonfile )
         assert( quality >= 20 )
+        assert( os.path.basename( jsonfile ).endswith( '.json' ) )
         process_single_directory(
-        directory_name = args.directory, do_hevc = args.do_hevc,
-            min_bitrate = args.minbitrate, qual = quality )
+            directory_name = args.directory, do_hevc = args.do_hevc,
+            min_bitrate = args.minbitrate, qual = quality,
+            output_json_file = jsonfile )
