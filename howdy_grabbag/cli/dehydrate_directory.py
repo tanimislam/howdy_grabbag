@@ -36,6 +36,14 @@ def _get_hevc_bitrate( filename ):
         return info
     except: return None
 
+def _get_bitrate_AVI( filename ):
+    try:
+        data = _get_ffprobe_json( filename )
+        info = { 
+            'bit_rate_kbps' : float( data['format']['bit_rate' ] ) / 1_024, }
+        return info
+    except: return None
+
 def find_files_to_process( directory_name = os.getcwd( ), do_hevc = True, min_bitrate = 2_000 ):
     fnames = sorted(
         glob.glob( os.path.join( directory_name, '*.mp4' ) ) +
@@ -47,7 +55,15 @@ def find_files_to_process( directory_name = os.getcwd( ), do_hevc = True, min_bi
         if not do_hevc:
             list_of_files_hevc_br = list(filter(lambda tup: tup[1]['is_hevc'] == False,
                                                 list_of_files_hevc_br ) )
-        return dict( list_of_files_hevc_br )        
+        return dict( list_of_files_hevc_br )
+
+def find_files_to_process_AVI( directory_name = os.getcwd( ) ):
+    fnames = sorted(
+        glob.glob( os.path.join( directory_name, '*.avi' ) ) +
+        glob.glob( os.path.join( directory_name, '*.mpg' ) ) ) 
+    with Pool( processes = cpu_count( ) ) as pool:
+        return dict( 
+            pool.map(lambda fname: ( fname, _get_bitrate_AVI( fname ) ), fnames ) )
 
 def process_single_directory(
     directory_name = os.getcwd( ), do_hevc = True, min_bitrate = 2_000,
@@ -86,6 +102,46 @@ def process_single_directory(
         dt00, len( fnames_dict ) ) )
     json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
 
+
+def process_single_directory_AVI(
+    directory_name = os.getcwd( ),
+    qual = 22,
+    output_json_file = 'processed_stuff.json' ):
+    assert( os.path.basename( output_json_file ).endswith( '.json' ) )
+    fnames_dict = find_files_to_process_AVI(
+        directory_name = directory_name )
+    time00 = time.perf_counter( )
+    list_processed = [ 'found %02d files to dehydrate in %s.' % (
+        len( fnames_dict ), os.path.abspath( directory_name ) ), ]
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+    for idx, filename in enumerate(sorted( fnames_dict ) ):
+        time0 = time.perf_counter( )
+        newfile = '.'.join(
+            os.path.basename( filename ).split('.')[:-1] + [ 'mkv', ] )
+        stdout_val = subprocess.check_output([
+            _nice_exec, '-n', '19', _hcli_exec,
+            '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-B', '160',
+            '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
+            '-s', ','.join(map(lambda num: '%d' % num, range(1,35))),
+            '-o', newfile ],
+            stderr = subprocess.PIPE )
+        #
+        os.chmod(newfile, 0o644 )
+        shutil.rename( newfile, os.path.join( directory_name, newfile ) )
+        # os.remove( filename )
+        dt0 = time.perf_counter( ) - time0
+        logging.info( 'processed file %02d / %02d in %0.3f seconds' % (
+            idx + 1, len( fnames_dict ), dt0 ) )
+        list_processed.append( 'processed file %02d / %02d in %0.3f seconds' % (
+            idx + 1, len( fnames_dict ), dt0 ) )
+        json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+    dt00 = time.perf_counter( ) - time00
+    logging.info( 'took %0.3f seconds to process %d files' % (
+        dt00, len( fnames_dict ) ) )
+    list_processed.append( 'took %0.3f seconds to process %d files' % (
+        dt00, len( fnames_dict ) ) )
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+    
 def main( ):
     parser = ArgumentParser( )
     parser.add_argument( '-d', '--directory', dest='directory', type=str, action = 'store', default = os.getcwd( ),
@@ -98,11 +154,13 @@ def main( ):
                         help = 'If chosen, then turn on INFO logging.' )
     parser.add_argument( '-N', '--nohevc', dest = 'do_hevc', action = 'store_false', default = True,
                         help = 'If chosen, then only process the big episodes that are NOT HEVC. Default is to process everything.' )
+    parser.add_argument( '-A', '--doavi', dest = 'do_avi', action = 'store_true', default = False,
+                        help = 'If chosen, then process AVI and MPEG files for dehydration at higher qualities.' )
     #
     ## check on which TV shows are candidates for dehydration, or to dehydrate specific TV shows.
     subparsers = parser.add_subparsers( help = ' '.join([
         'Choose on whether to list the filenames in a directory to dehydrate,',
-        'or to dehydrate all valid MP4 and MKV files at top level inside a directory.' ]),
+        'or to dehydrate all valid MP4 and MKV or AVI and MPEG files at top level inside a directory.' ]),
                                        dest = 'choose_option' )
     parser_listcandidates = subparsers.add_parser( 'list',      help = 'If chosen, then list the valid filenames to dehydrate.' )
     parser_dehydrate      = subparsers.add_parser( 'dehydrate', help = 'If chosen, then dehydrate all valid filenames.' )
@@ -124,15 +182,25 @@ def main( ):
     #
     ## list filenames
     if args.choose_option == 'list':
-        fnames_dict = find_files_to_process(
-            directory_name = args.directory,
-            do_hevc = args.do_hevc, min_bitrate = args.minbitrate )
-        data = list( zip(
-            map(os.path.basename, sorted( fnames_dict ) ),
-            map(lambda fname: '%0.1f' % fnames_dict[ fname ][ 'bit_rate_kbps' ], sorted( fnames_dict ) ) ) )
-        print( 'found %02d valid files in %s with min bitrate >= %d kbps.\n' % (
-            len( fnames_dict ), os.path.abspath( args.directory ), args.minbitrate ) )
-        print( '%s\n' % tabulate( data, headers = [ 'FILENAME', 'KBPS' ] ) )
+        if not args.do_avi:
+            fnames_dict = find_files_to_process(
+                directory_name = args.directory,
+                do_hevc = args.do_hevc, min_bitrate = args.minbitrate )
+            data = list( zip(
+                map(os.path.basename, sorted( fnames_dict ) ),
+                map(lambda fname: '%0.1f' % fnames_dict[ fname ][ 'bit_rate_kbps' ], sorted( fnames_dict ) ) ) )
+            print( 'found %02d valid files in %s with min bitrate >= %d kbps.\n' % (
+                len( fnames_dict ), os.path.abspath( args.directory ), args.minbitrate ) )
+            print( '%s\n' % tabulate( data, headers = [ 'FILENAME', 'KBPS' ] ) )
+        else:
+            fnames_dict_AVI = find_files_to_process_AVI(
+                directory_name = args.directory )
+            data_AVI = list( zip(
+                map(os.path.basename, sorted( fnames_dict_AVI ) ),
+                map(lambda fname: '%0.1f' % fnames_dict_AVI[ fname ][ 'bit_rate_kbps' ], sorted( fnames_dict_AVI ) ) ) )
+            print( 'found %02d valid files in %s.\n' % (
+                len( fnames_dict_AVI ), os.path.abspath( args.directory ) ) )
+            print( '%s\n' % tabulate( data_AVI, headers = [ 'FILENAME', 'KBPS' ] ) )
         print( 'took %0.3f seconds to process.' % ( time.perf_counter( ) - time0 ) )
         return
     #
@@ -140,9 +208,15 @@ def main( ):
     elif args.choose_option == 'dehydrate':
         quality = args.parser_dehydrate_quality
         jsonfile = os.path.expanduser( args.parser_dehydrate_jsonfile )
-        assert( quality >= 20 )
         assert( os.path.basename( jsonfile ).endswith( '.json' ) )
-        process_single_directory(
-            directory_name = args.directory, do_hevc = args.do_hevc,
-            min_bitrate = args.minbitrate, qual = quality,
-            output_json_file = jsonfile )
+        assert( quality >= 20 )
+        if not args.do_avi:
+            process_single_directory(
+                directory_name = args.directory, do_hevc = args.do_hevc,
+                min_bitrate = args.minbitrate, qual = quality,
+                output_json_file = jsonfile )
+        else:
+            process_single_directory_AVI(
+                directory_name = args.directory,
+                qual = quality,
+                output_json_file = jsonfile )
