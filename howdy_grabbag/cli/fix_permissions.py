@@ -36,7 +36,7 @@ def fix_permissions( topdir, username, groupname ):
     _ = list(map( set_perms_dir, dpaths ) )
     _ = list(map( set_perms_file, fpaths ) )
     logging.info( 'TOOK %0.3f SECONDS TO CHANGE OWNERSHIP OF %d FILES and %d DIRECTORIES IN %s TOP LEVEL DIRECTORY TO USER = %s AND GROUP = %s.' % (
-        time.perf_counter( ), len( fpaths ), len( dpaths ), username, groupname ) )
+        time.perf_counter( ) - time0, len( fpaths ), len( dpaths ), os.path.abspath( topdir ), username, groupname ) )
 
 def main( ):
     parser = ArgumentParser( )
