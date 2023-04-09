@@ -81,7 +81,7 @@ def process_single_directory(
         newfile = '%s-%s' % ( str( uuid.uuid4( ) ).split('-')[0].strip( ), os.path.basename( filename ) )
         stdout_val = subprocess.check_output([
             _nice_exec, '-n', '19', _hcli_exec,
-            '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-B', '160',
+            '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-E', 'av_aac', '-B', '160',
             '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
             '-s', ','.join(map(lambda num: '%d' % num, range(1,35))),
             '-o', newfile ],
