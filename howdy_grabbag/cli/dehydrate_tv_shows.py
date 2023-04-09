@@ -169,7 +169,7 @@ def process_single_show( df_sub, showname, do_hevc = True, qual = 28 ):
         newfile = os.path.basename( filename )
         stdout_val = subprocess.check_output([
             nice_exec, '-n', '19', hcli_exec,
-            '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-B', '160',
+            '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-E', 'av_aac', '-B', '160',
             '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
             '-s', ','.join(map(lambda num: '%d' % num, range(1,35))),
             '-o', newfile ],
