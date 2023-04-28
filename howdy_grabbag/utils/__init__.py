@@ -1,6 +1,19 @@
 import os, sys, time, subprocess, glob, json, titlecase, re
 from shutil import which
 
+def find_ffmpeg_exec( ):
+    ffmpeg_exec = which( 'ffmpeg' )
+    if ffmpeg_exec is None: return None
+    #
+    ## now check if we can execute on it
+    if os.access( ffmpeg_exec, os.X_OK ): return ffmpeg_exec
+    #
+    ## otherwise look in /usr/bin
+    ffmpeg_exec = which( 'ffmpeg', path='/usr/bin')
+    if ffmpeg_exec is None: return None
+    if os.access( ffmpeg_exec, os.X_OK ): return ffmpeg_exec
+    return None   
+
 def create_epdicts_from_jsonfile( jsonfile ):
     assert( os.path.exists( jsonfile ) )
     epdicts_sub = json.load( open( jsonfile, 'r' ) )

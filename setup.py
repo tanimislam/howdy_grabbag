@@ -1,16 +1,16 @@
 from setuptools import setup, find_packages
-from distutils.spawn import find_executable
+from shutil import which
 #
 ## requirements are in "requirements.txt"
 #
-## fail hard if cannot find ffmpeg, ffprobe
-if find_executable( 'ffmpeg' ) is None:
+## fail hard if cannot find ffmpeg, ffprobe, mkvmerge, HandBrakeCLI
+if which( 'ffmpeg' ) is None:
     raise ValueError("Error, cannot find necessary executable: ffmpeg" )
-if find_executable( 'ffprobe' ) is None:
+if which( 'ffprobe' ) is None:
     raise ValueError("Error, cannot find necessary executable: ffprobe" )
-if find_executable( 'mkvmerge' ) is None:
+if which( 'mkvmerge' ) is None:
     raise ValueError("Error, cannot find necessary executable: mkvmerge" )
-if find_executable( 'HandBrakeCLI' ) is None:
+if which( 'HandBrakeCLI' ) is None:
     print( "Although would be nice to have, cannot find HandBrakeCLI. Cannot do transcoding of movies here." )
 
 setup(
@@ -58,6 +58,7 @@ setup(
         'console_scripts' : [
             'convert_mp4movie_to_mkv = howdy_grabbag.cli.convert_mp4movie_to_mkv:main',
             'convert_mp4tv_to_mkv = howdy_grabbag.cli.convert_mp4tv_to_mkv:main',
+            'rename_mkv_tv = howdy_grabbag.cli.rename_mkv_tv:main',
             'howdy_music_compilation = howdy_grabbag.cli.howdy_music:main_compilation',
             'howdy_music_individual = howdy_grabbag.cli.howdy_music:main_individual',
             'fix_permissions = howdy_grabbag.cli.fix_permissions:main',

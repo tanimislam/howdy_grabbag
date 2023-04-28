@@ -1,34 +1,15 @@
 """
-This converts an MP4 TV file, with SRT file, and name and year into an MKV file with English subtitles.
-
-19-09-2020: rename all dependencies to howdy from plexstuff
-12-05-2020: put into plexstuff_grabbag repo
-20-10-2019: now can use HandBrakeCLI to convert the MP4 movie file to an MKV file that is smaller
-
-Requires titlecase, mutagen, howdy
-Requires executables: ffmpeg, mkvmerge 
+This converts an MP4 TV file, with SRT file, and given TV show and season and epno, into an MKV with subtitles with PLEX convention TV file name.
 """
 
 import mutagen.mp4, time, os, sys, titlecase
 import uuid, logging, subprocess
+from howdy_grabbag.utils import find_ffmpeg_exec
 from howdy.tv import tv_attic
 from shutil import which
 from argparse import ArgumentParser
 
-def _find_ffmpeg_exec( ):
-    ffmpeg_exec = which( 'ffmpeg' )
-    if ffmpeg_exec is None: return None
-    #
-    ## now check if we can execute on it
-    if os.access( ffmpeg_exec, os.X_OK ): return ffmpeg_exec
-    #
-    ## otherwise look in /usr/bin
-    ffmpeg_exec = which( 'ffmpeg', path='/usr/bin')
-    if ffmpeg_exec is None: return None
-    if os.access( ffmpeg_exec, os.X_OK ): return ffmpeg_exec
-    return None   
-
-ffmpeg_exec = _find_ffmpeg_exec( )
+ffmpeg_exec = find_ffmpeg_exec( )
 mkvmerge_exec = which( 'mkvmerge' )
 assert( all(map(lambda exec_f: exec_f is not None,
                 ( ffmpeg_exec, mkvmerge_exec,  ) ) ) )
@@ -88,9 +69,9 @@ def create_mkv_file(
 def main( ):
     parser = ArgumentParser( )
     parser.add_argument( '--mp4', dest='mp4', type=str, action='store',
-                       help = 'Name of the MP4 movie file name.', required = True )
+                       help = 'Name of the MP4 TV file name.', required = True )
     parser.add_argument( '--srt', dest='srt', type=str, action='store',
-                       help = 'Name of the SRT subtitle file associated with the movie.' )
+                       help = 'Name of the SRT subtitle file associated with the TV file.' )
     parser.add_argument( '-S', '--series', dest='seriesName', type=str, action='store',
                        help = 'Name of the TV show.', required = True )
     parser.add_argument( '-e', '--epstring', dest='epstring', type=str, action='store',

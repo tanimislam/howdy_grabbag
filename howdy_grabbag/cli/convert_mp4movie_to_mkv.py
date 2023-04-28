@@ -11,25 +11,13 @@ Requires executables: ffmpeg, mkvmerge, HandBrakeCLI
 
 import mutagen.mp4, time, os, sys, titlecase
 import uuid, logging, subprocess
-from distutils.spawn import find_executable
+from howdy_grabbag.utils import find_ffmpeg_exec
+from shutil import which
 from argparse import ArgumentParser
 
-def _find_ffmpeg_exec( ):
-    ffmpeg_exec = find_executable( 'ffmpeg' )
-    if ffmpeg_exec is None: return None
-    #
-    ## now check if we can execute on it
-    if os.access( ffmpeg_exec, os.X_OK ): return ffmpeg_exec
-    #
-    ## otherwise look in /usr/bin
-    ffmpeg_exec = find_executable( 'ffmpeg', path='/usr/bin')
-    if ffmpeg_exec is None: return None
-    if os.access( ffmpeg_exec, os.X_OK ): return ffmpeg_exec
-    return None   
-
-ffmpeg_exec = _find_ffmpeg_exec( )
-mkvmerge_exec = find_executable( 'mkvmerge' )
-hcli_exec = find_executable( 'HandBrakeCLI' )
+ffmpeg_exec = find_ffmpeg_exec( )
+mkvmerge_exec = which( 'mkvmerge' )
+hcli_exec = which( 'HandBrakeCLI' )
 assert( all(map(lambda exec_f: exec_f is not None,
                 ( ffmpeg_exec, mkvmerge_exec, hcli_exec ) ) ) )
 
@@ -37,7 +25,7 @@ def convert_mp4_movie(
         mp4movie, name, year, quality = 28,
         srtfile = None,
         delete_files = False, outdir = os.getcwd( ) ):
-    time0 = time.time( )
+    time0 = time.perf_counter( )
     assert( os.path.isfile( mp4movie ) )
     assert( os.path.basename( mp4movie ).lower( ).endswith( '.mp4' ) )
     assert( (quality >= 20 ) and (quality <= 30) )
@@ -51,22 +39,18 @@ def convert_mp4_movie(
             os.path.expanduser( outdir ),
             '%s (%d).mkv' % ( titlecase.titlecase( name ), year ) ) )
     put_info_mp4movie( mp4movie, name, year )
-    proc = subprocess.Popen(
+    stdout_val = subprocess.check_output(
         [ hcli_exec, '-i', mp4movie, '-e', 'x264', '-q', '%d' % quality,
-          '-B', '160', '-o', newfile ], stdout = subprocess.PIPE,
-        stderr = subprocess.STDOUT )
-    stdout_val, stderr_val = proc.communicate( )
+          '-B', '160', '-o', newfile ], stderr = subprocess.STDOUT )
     #
     if srtfile is not None:
         tmpmkv = '%s.mkv' % '-'.join( str( uuid.uuid4( ) ).split('-')[:2] )
-        proc = subprocess.Popen(
+        stdout_val = subprocess.check_output(
             [
                 mkvmerge_exec, '-o', tmpmkv, newfile,
                 '--language', '0:eng',
                 '--track-name', '0:English', srtfile ],
-            stdout = subprocess.PIPE,
             stderr = subprocess.STDOUT )
-        stdout_val, stderr_val = proc.communicate( )
         os.rename( tmpmkv, newfile )
     #
     os.chmod( newfile, 0o644 )
@@ -75,11 +59,11 @@ def convert_mp4_movie(
         try: os.remove( srtfile )
         except: pass
     logging.info( 'created %s in %0.3f seconds.' % (
-        newfile, time.time( ) - time0 ) )
+        newfile, time.perf_counter( ) - time0 ) )
 
 
 def put_info_mp4movie( mp4movie, name, year ):
-    time0 = time.time( )
+    time0 = time.perf_counter( )
     assert( os.path.isfile( mp4movie ) )
     assert( os.path.basename( mp4movie ).lower( ).endswith('.mp4' ) )
     mp4tags = mutagen.mp4.MP4( mp4movie )
@@ -87,12 +71,12 @@ def put_info_mp4movie( mp4movie, name, year ):
     mp4tags[ '\xa9day' ] = [ '%d' % year, ]
     mp4tags.save( )
     logging.info( 'took %0.3f seconds to add metadata to %s.' % (
-        time.time( ) - time0, mp4movie ) )
+        time.perf_counter( ) - time0, mp4movie ) )
 
 def create_mkv_file( mp4movie, name, year,
                      srtfile = None,
                      delete_files = False, outdir = os.getcwd( ) ):
-    time0 = time.time( )
+    time0 = time.perf_counter( )
     assert( os.path.isfile( mp4movie ) )
     assert( os.path.basename( mp4movie ).lower( ).endswith('.mp4' ) )
     if srtfile is not None:
@@ -133,7 +117,7 @@ def create_mkv_file( mp4movie, name, year,
         os.remove( mp4movie )
         try: os.remove( srtfile )
         except: pass
-    logging.info( 'created %s in %0.3f seconds.' % ( newfile, time.time( ) - time0 ) )
+    logging.info( 'created %s in %0.3f seconds.' % ( newfile, time.perf_counter( ) - time0 ) )
 
 def main( ):
     parser = ArgumentParser( )
