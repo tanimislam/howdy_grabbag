@@ -15,10 +15,10 @@ from howdy.tv import tv, get_token, tv_attic, get_tvdb_api, TMDBShowIds
 from howdy.music import music
 from howdy.movie import tmdb_apiKey
 from pathos.multiprocessing import Pool, cpu_count
-from distutils.spawn import find_executable
+from shutil import which
 
-_ffmpeg_exec  = find_executable( 'ffmpeg' )
-_ffprobe_exec = find_executable( 'ffprobe' )
+_ffmpeg_exec  = which( 'ffmpeg' )
+_ffprobe_exec = which( 'ffprobe' )
 assert( _ffmpeg_exec is not None )
 assert( _ffprobe_exec is not None )
 
