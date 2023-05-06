@@ -176,7 +176,7 @@ def main( ):
     ## parsing arguments
     time0 = time.perf_counter( )
     args = parser.parse_args( )
-    assert( args.minbitrate >= 1000 )
+    assert( args.minbitrate >= 500 )
     logger = logging.getLogger( )
     if args.do_info: logger.setLevel( logging.INFO )
     #
