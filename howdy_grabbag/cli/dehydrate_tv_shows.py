@@ -146,7 +146,7 @@ def summarize_single_show( df_sub, showname, minbitrate, mode_dataformat = DATAF
     data.append( [ 'MAX KBPS HEVC', df_show_ishevc[ 'bitrate (kbps)' ].max( ) ] )
     print( '%s\n' % tabulate( data, headers = [ 'PARAMETER', 'INFO' ] ) )
 
-def process_single_show( df_sub, showname, do_hevc = True, qual = 28 ):
+def process_single_show( df_sub, showname, do_hevc = True, qual = 28, output_json_file = 'processed_stuff.json' ):
     #
     ## check we have nice and HandBrakeCLI
     nice_exec = which( 'nice' )
@@ -163,7 +163,10 @@ def process_single_show( df_sub, showname, do_hevc = True, qual = 28 ):
     time00 = time.perf_counter( )
     df_show_sorted = df_show_sub.sort_values(by=['seasons', 'epnos']).reset_index( )
     episodes_sorted = list( df_show_sorted.paths )
-    list_processed = []
+    list_processed = [
+        "found %02d files to dehydrate in '%'." % (
+            len( episodes_sorted ), showname ), ]
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
     for idx, filename in enumerate(episodes_sorted):
         time0 = time.perf_counter( )
         newfile = os.path.basename( filename )
@@ -182,15 +185,15 @@ def process_single_show( df_sub, showname, do_hevc = True, qual = 28 ):
             idx + 1, len( episodes_sorted ), dt0 ) )
         list_processed.append( 'processed episode %02d / %02d in %0.3f seconds' % (
             idx + 1, len( episodes_sorted ), dt0 ) )
-        json.dump( list_processed, open( 'processed_stuff.json', 'w' ), indent = 1 )
+        json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
     dt00 = time.perf_counter( ) - time00
     print( 'took %0.3f seconds to process %d episodes' % (
         dt00, len( episodes_sorted ) ) )
     list_processed.append( 'took %0.3f seconds to process %d episodes' % (
         dt00, len( episodes_sorted ) ) )
-    json.dump( list_processed, open( 'processed_stuff.json', 'w' ), indent = 1 )
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
 
-def process_single_show_avi( df_sub, showname, qual = 20 ):
+def process_single_show_avi( df_sub, showname, qual = 20, output_json_file = 'processed_stuff_avi.json' ):
     #
     ## check we have nice and HandBrakeCLI
     nice_exec = which( 'nice' )
@@ -205,7 +208,10 @@ def process_single_show_avi( df_sub, showname, qual = 20 ):
     time00 = time.perf_counter( )
     df_show_sorted = df_show_sub.sort_values(by=['seasons', 'epnos']).reset_index( )
     episodes_sorted = list( df_show_sorted.paths )
-    list_processed = [ ]
+    list_processed = [
+        "found %02d files to deavify in '%'." % (
+            len( episodes_sorted ), showname ), ]
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
     #
     ## first go through redis database to see if shows are running
     for idx, filename in enumerate(episodes_sorted):
@@ -236,13 +242,13 @@ def process_single_show_avi( df_sub, showname, qual = 20 ):
                 idx + 1, len( episodes_sorted ), dt0 ) )
             list_processed.append( 'failed episode %02d / %02d in %0.3f seconds' % (
                 idx + 1, len( episodes_sorted ), dt0 ) )
-        json.dump( list_processed, open( 'processed_stuff_avi.json', 'w' ), indent = 1 )
+        json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
     dt00 = time.perf_counter( ) - time00
     print( 'took %0.3f seconds to process %d episodes' % (
         dt00, len( episodes_sorted ) ) )
     list_processed.append( 'took %0.3f seconds to process %d episodes' % (
         dt00, len( episodes_sorted ) ) )
-    json.dump( list_processed, open( 'processed_stuff_avi.json', 'w' ), indent = 1 )
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
         
 
 def main( ):
@@ -275,6 +281,8 @@ def main( ):
                                   default = 28, help = 'Will dehydrate shows using HEVC video codec with this quality. Default is 28. Must be >= 20.' )
     parser_dehydrate.add_argument( '-N', '--nohevc', dest = 'parser_dehydrate_do_hevc', action = 'store_false', default = True,
                                   help = 'If chosen, then only process the big episodes that are NOT HEVC. Default is to process everything.' )
+    parser_dehydrate.add_argument( '-J', '--jsonfile', dest = 'parser_dehydrate_jsonfile', metavar = 'JSONFILE', type = str, action = 'store', default = 'processed_stuff.json',
+                                  help = 'Name of the JSON file to store progress-as-you-go-along on TV show dehydration. Default file name = "processed_stuff.json".' )
     #
     ## parsing arguments
     time0 = time.perf_counter( )
@@ -303,6 +311,8 @@ def main( ):
     elif args.choose_option == 'dehydrate':
         showname = args.parser_dehydrate_show
         assert( showname in shownames )
+        jsonfile = os.path.expanduser( args.parser_dehydrate_jsonfile )
+        assert( os.path.basename( jsonfile ).endswith( '.json' ) )
         #
         ## just do info then return
         if args.parser_dehydrate_do_info:
@@ -314,7 +324,7 @@ def main( ):
         quality = args.parser_dehydrate_quality
         assert( quality >= 20 )
         process_single_show( df_sub, showname, do_hevc = args.parser_dehydrate_do_hevc,
-                            qual = quality )
+                            qual = quality, output_json_file = jsonfile )
 
 def main_avis( ):
     parser = ArgumentParser( )
@@ -340,6 +350,8 @@ def main_avis( ):
                                   help = 'If chosen, then only print out info on the selected TV show.' )
     parser_deavify.add_argument( '-Q', '--quality', dest = 'parser_deavify_quality', metavar = 'QUALITY', type = int, action = 'store',
                                   default = 21, help = 'Will deavify shows using HEVC video codec with this quality. Default is 21. Must be >= 18.' )
+    parser_dehydrate.add_argument( '-J', '--jsonfile', dest = 'parser_deavify_jsonfile', metavar = 'JSONFILE', type = str, action = 'store', default = 'processed_stuff_avi.json',
+                                  help = 'Name of the JSON file to store progress-as-you-go-along on TV show dehydration. Default file name = "processed_stuff_avi.json".' )
     #
     ## parsing arguments
     time0 = time.perf_counter( )
@@ -367,6 +379,8 @@ def main_avis( ):
     elif args.choose_option == 'deavify':
         showname = args.parser_deavify_show
         assert( showname in shownames )
+        jsonfile = os.path.expanduser( args.parser_deavify_jsonfile )
+        assert( os.path.basename( jsonfile ).endswith( '.json' ) )
         #
         ## just do info then return
         if args.parser_deavify_do_info:

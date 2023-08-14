@@ -186,5 +186,3 @@ def main_individual( ):
     #
     download_indiv_song(
         input_data, args.album_cover_filename, args.youtube_URL )
-
-    
