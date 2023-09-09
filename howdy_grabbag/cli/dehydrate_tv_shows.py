@@ -164,7 +164,7 @@ def process_single_show( df_sub, showname, do_hevc = True, qual = 28, output_jso
     df_show_sorted = df_show_sub.sort_values(by=['seasons', 'epnos']).reset_index( )
     episodes_sorted = list( df_show_sorted.paths )
     list_processed = [
-        "found %02d files to dehydrate in '%'." % (
+        "found %02d files to dehydrate in '%s'." % (
             len( episodes_sorted ), showname ), ]
     json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
     for idx, filename in enumerate(episodes_sorted):
@@ -181,16 +181,12 @@ def process_single_show( df_sub, showname, do_hevc = True, qual = 28, output_jso
         os.chmod(newfile, 0o644 )
         shutil.move( newfile, filename )
         dt0 = time.perf_counter( ) - time0
-        print('processed episode %02d / %02d in %0.3f seconds' % (
-            idx + 1, len( episodes_sorted ), dt0 ) )
         list_processed.append( 'processed episode %02d / %02d in %0.3f seconds' % (
             idx + 1, len( episodes_sorted ), dt0 ) )
         json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
     dt00 = time.perf_counter( ) - time00
-    print( 'took %0.3f seconds to process %d episodes' % (
-        dt00, len( episodes_sorted ) ) )
-    list_processed.append( 'took %0.3f seconds to process %d episodes' % (
-        dt00, len( episodes_sorted ) ) )
+    list_processed.append( "took %0.3f seconds to process %d episodes in '%s'." % (
+        dt00, len( episodes_sorted ), showname ) )
     json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
 
 def process_single_show_avi( df_sub, showname, qual = 20, output_json_file = 'processed_stuff_avi.json' ):
