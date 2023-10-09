@@ -117,7 +117,7 @@ def process_single_directory_AVI(
     for idx, filename in enumerate(sorted( fnames_dict ) ):
         time0 = time.perf_counter( )
         newfile = '.'.join(
-            os.path.basename( filename ).split('.')[:-1] + [ 'mkv', ] )
+            os.path.basename( filename ).split('.')[:-1].replace(":", "-") + [ 'mkv', ] )
         stdout_val = subprocess.check_output([
             _nice_exec, '-n', '19', _hcli_exec,
             '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-B', '160',
