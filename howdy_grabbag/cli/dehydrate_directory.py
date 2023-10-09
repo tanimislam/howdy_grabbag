@@ -78,7 +78,7 @@ def process_single_directory(
     json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
     for idx, filename in enumerate(sorted( fnames_dict ) ):
         time0 = time.perf_counter( )
-        newfile = '%s-%s' % ( str( uuid.uuid4( ) ).split('-')[0].strip( ), os.path.basename( filename ) )
+        newfile = '%s-%s' % ( str( uuid.uuid4( ) ).split('-')[0].strip( ), os.path.basename( filename ).replace(":", "-" ) )
         stdout_val = subprocess.check_output([
             _nice_exec, '-n', '19', _hcli_exec,
             '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-E', 'av_aac', '-B', '160',
