@@ -47,7 +47,8 @@ def _get_bitrate_AVI( filename ):
 def find_files_to_process( directory_name = os.getcwd( ), do_hevc = True, min_bitrate = 2_000 ):
     fnames = sorted(
         glob.glob( os.path.join( directory_name, '*.mp4' ) ) +
-        glob.glob( os.path.join( directory_name, '*.mkv' ) ) ) 
+        glob.glob( os.path.join( directory_name, '*.mkv' ) ) +
+        glob.glob( os.path.join( directory_name, '*.webm' ) ) )
     with Pool( processes = cpu_count( ) ) as pool:
         list_of_files_hevc_br = list(filter(
             lambda tup: tup[1] is not None and tup[1]['bit_rate_kbps'] >= min_bitrate,
