@@ -121,15 +121,14 @@ def process_single_directory_AVI(
             os.path.basename( filename ).replace(":", "-").split('.')[:-1] + [ 'mkv', ] )
         stdout_val = subprocess.check_output([
             _nice_exec, '-n', '19', _hcli_exec,
-            '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-B', '160',
+            '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-E', 'av_aac', '-B', '160',
             '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
-            '-s', ','.join(map(lambda num: '%d' % num, range(1,35))),
             '-o', newfile ],
             stderr = subprocess.PIPE )
         #
         os.chmod(newfile, 0o644 )
-        shutil.rename( newfile, os.path.join( directory_name, newfile ) )
-        # os.remove( filename )
+        shutil.move( newfile, directory_name )
+        os.remove( filename )
         dt0 = time.perf_counter( ) - time0
         logging.info( 'processed file %02d / %02d in %0.3f seconds' % (
             idx + 1, len( fnames_dict ), dt0 ) )
