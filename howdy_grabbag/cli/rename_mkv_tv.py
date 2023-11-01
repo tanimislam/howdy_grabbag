@@ -20,7 +20,9 @@ def rename_mkv_file(
     #
     time0 = time.perf_counter( )
     assert( os.path.isfile( mkvtv ) )
-    assert( os.path.basename( mkvtv ).lower( ).endswith('.mkv' ) )
+    assert( any(map(lambda suffix: os.path.basename( mkvtv ).lower( ).endswith('.%s' %suffix ),
+                    ( 'avi', 'mp4', 'mpg', 'mkv', 'webm' ) ) ) )
+    actual_suffix = os.path.basename( mkvtv ).lower( ).split('.')[-1].strip( )
     #
     ## get the episode info first find the series
     epdicts = tv_attic.get_tot_epdict_tmdb(
@@ -32,7 +34,7 @@ def rename_mkv_file(
     newfile = os.path.abspath(
         os.path.join(
             os.path.expanduser( outdir ),
-            '%s - s%02de%02d - %s.mkv' % ( tvshow, seasno, epno, epname ) ) )
+            '%s - s%02de%02d - %s.%s' % ( tvshow, seasno, epno, epname, actual_suffix ) ) )
     os.rename( mkvtv, newfile )
     os.chmod( newfile, 0o644 )
     logging.info( 'created %s in %0.3f seconds.' % ( newfile, time.perf_counter( ) - time0 ) )
@@ -60,7 +62,8 @@ def main( ):
     ## error checking
     assert( os.path.isdir( args.outdir ) )
     assert( os.path.isfile( args.inputmkv ) )
-    assert( os.path.basename( args.inputmkv ).lower( ).endswith('.mkv' ) )
+    assert( any(map(lambda suffix: os.path.basename( args.inputmkv ).lower( ).endswith('.%s' %suffix ),
+                    ( 'avi', 'mp4', 'mpg', 'mkv', 'webm' ) ) ) )
     #
     ##
     logger = logging.getLogger( )
