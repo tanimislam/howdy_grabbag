@@ -346,7 +346,7 @@ def main_avis( ):
                                   help = 'If chosen, then only print out info on the selected TV show.' )
     parser_deavify.add_argument( '-Q', '--quality', dest = 'parser_deavify_quality', metavar = 'QUALITY', type = int, action = 'store',
                                   default = 21, help = 'Will deavify shows using HEVC video codec with this quality. Default is 21. Must be >= 18.' )
-    parser_dehydrate.add_argument( '-J', '--jsonfile', dest = 'parser_deavify_jsonfile', metavar = 'JSONFILE', type = str, action = 'store', default = 'processed_stuff_avi.json',
+    parser_deavify.add_argument( '-J', '--jsonfile', dest = 'parser_deavify_jsonfile', metavar = 'JSONFILE', type = str, action = 'store', default = 'processed_stuff_avi.json',
                                   help = 'Name of the JSON file to store progress-as-you-go-along on TV show dehydration. Default file name = "processed_stuff_avi.json".' )
     #
     ## parsing arguments
