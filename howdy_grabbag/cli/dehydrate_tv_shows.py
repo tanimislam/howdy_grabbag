@@ -205,7 +205,7 @@ def process_single_show_avi( df_sub, showname, qual = 20, output_json_file = 'pr
     df_show_sorted = df_show_sub.sort_values(by=['seasons', 'epnos']).reset_index( )
     episodes_sorted = list( df_show_sorted.paths )
     list_processed = [
-        "found %02d files to deavify in '%'." % (
+        "found %02d files to deavify in '%s'." % (
             len( episodes_sorted ), showname ), ]
     json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
     #
@@ -387,4 +387,4 @@ def main_avis( ):
         ## now the big thing
         quality = args.parser_deavify_quality
         assert( quality >= 20 )
-        process_single_show_avi( df_sub, showname, qual = quality )
+        process_single_show_avi( df_sub, showname, qual = quality, output_json_file = jsonfile )
