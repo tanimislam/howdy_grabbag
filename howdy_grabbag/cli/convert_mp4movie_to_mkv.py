@@ -2,11 +2,11 @@
 This converts an MP4 movie, with SRT file, and name and year into an MKV file with English subtitles.
 
 19-09-2020: rename all dependencies to howdy from plexstuff
-12-05-2020: put into plexstuff_grabbag repo
+12-05-2020: put into howdy_grabbag repo
 20-10-2019: now can use HandBrakeCLI to convert the MP4 movie file to an MKV file that is smaller
 
 Requires titlecase, mutagen
-Requires executables: ffmpeg, mkvmerge, HandBrakeCLI
+Requires executables: ffmpeg, mkvmerge, mkvpropedit, HandBrakeCLI
 """
 
 import mutagen.mp4, time, os, sys, titlecase
@@ -17,9 +17,10 @@ from argparse import ArgumentParser
 
 ffmpeg_exec = find_ffmpeg_exec( )
 mkvmerge_exec = which( 'mkvmerge' )
+mkvpropedit_exec = which( 'mkvpropedit' )
 hcli_exec = which( 'HandBrakeCLI' )
 assert( all(map(lambda exec_f: exec_f is not None,
-                ( ffmpeg_exec, mkvmerge_exec, hcli_exec ) ) ) )
+                ( ffmpeg_exec, mkvmerge_exec, mkvpropedit_exec, hcli_exec ) ) ) )
 
 def convert_mp4_movie(
         mp4movie, name, year, quality = 28,
@@ -62,7 +63,7 @@ def convert_mp4_movie(
         newfile, time.perf_counter( ) - time0 ) )
 
 
-def put_info_mp4movie( mp4movie, name, year ):
+def put_info_mp4movie( mp4movie, name, year, language = None ):
     time0 = time.perf_counter( )
     assert( os.path.isfile( mp4movie ) )
     assert( os.path.basename( mp4movie ).lower( ).endswith('.mp4' ) )
@@ -75,7 +76,8 @@ def put_info_mp4movie( mp4movie, name, year ):
 
 def create_mkv_file( mp4movie, name, year,
                      srtfile = None,
-                     delete_files = False, outdir = os.getcwd( ) ):
+                     delete_files = False, outdir = os.getcwd( ),
+                     language = None ):
     time0 = time.perf_counter( )
     assert( os.path.isfile( mp4movie ) )
     assert( os.path.basename( mp4movie ).lower( ).endswith('.mp4' ) )
@@ -90,12 +92,10 @@ def create_mkv_file( mp4movie, name, year,
     logging.debug( 'FFMPEG COMMAND: %s' % ' '.join(
         [ ffmpeg_exec, '-y', '-i', mp4movie,
          '-codec', 'copy', "file:%s" % newfile ] ) )
-    proc = subprocess.Popen(
+    stdout_val = subprocess.check_output(
         [ ffmpeg_exec, '-y', '-i', mp4movie,
          '-codec', 'copy', "file:%s" % newfile ],
-        stdout = subprocess.PIPE,
         stderr = subprocess.STDOUT )
-    stdout_val, stderr_val = proc.communicate( )
     #
     if srtfile is not None:
         tmpmkv = '%s.mkv' % '-'.join( str( uuid.uuid4( ) ).split('-')[:2] )
@@ -103,13 +103,11 @@ def create_mkv_file( mp4movie, name, year,
              [ mkvmerge_exec, '-o', tmpmkv, newfile,
              '--language', '0:eng',
              '--track-name', '0:English', srtfile ] ) )
-        proc = subprocess.Popen(
+        stdout_val = subprocess.check_output(
             [ mkvmerge_exec, '-o', tmpmkv, newfile,
              '--language', '0:eng',
              '--track-name', '0:English', srtfile ],
-            stdout = subprocess.PIPE,
             stderr = subprocess.STDOUT )
-        stdout_val, stderr_val = proc.communicate( )
         os.rename( tmpmkv, newfile )
     #
     os.chmod( newfile, 0o644 )
@@ -117,6 +115,13 @@ def create_mkv_file( mp4movie, name, year,
         os.remove( mp4movie )
         try: os.remove( srtfile )
         except: pass
+    if language is not None:
+        logging.info( 'setting audio track language to %s.' % language )
+        stdout_val = subprocess.check_output(
+            [ mkvpropedit_exec, newfile, '--edit', 'track:a1',
+             '--set', 'language=%s' % language ], stderr = subprocess.PIPE )
+        os.chmod( newfile, 0o644 )
+        
     logging.info( 'created %s in %0.3f seconds.' % ( newfile, time.perf_counter( ) - time0 ) )
 
 def main( ):
@@ -129,6 +134,8 @@ def main( ):
                        help = 'Name of the movie.', required = True )
     parser.add_argument( '-y', '--year', type=int, action='store',
                        help = 'Year in which the movie was aired.', required = True )
+    parser.add_argument( '-L', '--lang', type=str, action='store', default = None,
+                       help = 'Optional argument, specify the language of the audio track.' )
     parser.add_argument(
         '-o', '--outdir', dest='outdir', action='store', type=str, default = os.getcwd( ),
         help = 'The directory into which we save the final MKV file. Default is %s.' % os.getcwd( ) )
@@ -171,4 +178,5 @@ def main( ):
         args.mp4, args.name, args.year,
         delete_files = args.do_delete,
         srtfile = args.srt,
-        outdir = args.outdir )
+        outdir = args.outdir,
+        language = args.lang )
