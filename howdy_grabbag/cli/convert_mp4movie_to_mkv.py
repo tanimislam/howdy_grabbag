@@ -46,12 +46,14 @@ def convert_mp4_movie(
     #
     if srtfile is not None:
         tmpmkv = '%s.mkv' % '-'.join( str( uuid.uuid4( ) ).split('-')[:2] )
-        stdout_val = subprocess.check_output(
+        try:
+          stdout_val = subprocess.check_output(
             [
-                mkvmerge_exec, '-o', tmpmkv, newfile,
-                '--language', '0:eng',
-                '--track-name', '0:English', srtfile ],
+              mkvmerge_exec, '-o', tmpmkv, newfile,
+              '--language', '0:eng',
+              '--track-name', '0:English', srtfile ],
             stderr = subprocess.STDOUT )
+        except: pass
         os.rename( tmpmkv, newfile )
     #
     os.chmod( newfile, 0o644 )
@@ -103,11 +105,13 @@ def create_mkv_file( mp4movie, name, year,
              [ mkvmerge_exec, '-o', tmpmkv, newfile,
              '--language', '0:eng',
              '--track-name', '0:English', srtfile ] ) )
-        stdout_val = subprocess.check_output(
+        try:
+          stdout_val = subprocess.check_output(
             [ mkvmerge_exec, '-o', tmpmkv, newfile,
-             '--language', '0:eng',
-             '--track-name', '0:English', srtfile ],
+              '--language', '0:eng',
+              '--track-name', '0:English', srtfile ],
             stderr = subprocess.STDOUT )
+        except: pass
         os.rename( tmpmkv, newfile )
     #
     os.chmod( newfile, 0o644 )
