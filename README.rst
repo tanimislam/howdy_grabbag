@@ -1,7 +1,7 @@
 ===============================================================================
  Howdy-GRABBAG - A Bunch of Additional Plex_ and Multimedia Utility Scripts
 ===============================================================================
-This repository consists of a bunch of random utility scripts that use, or are associated with, Howdy_. Howdy_ is an SDK used to manage movies, television shows, and music located on a Plex_ server. Its relatively comprehensive documentation (missing documentation on two of its GUIs) lives in `howdy.readthedocs.io`_.
+This repository consists of a bunch of random utility scripts that use, or are associated with, Howdy_. Howdy_ is an SDK used to manage movies, television shows, and music located on a Plex_ server. Its relatively comprehensive documentation (missing documentation on two of its GUIs) lives in `tanimislam.github.io/howdy`_.
 
 This module depends explicitly on howdy_ and mutagen_. This module will not install and run without ffmpeg_, ffprobe_, and mkvmerge_. This module will install without HandBrakeCLI_, but with reduced functionality -- no transcoding in convert_mp4movie_to_mkv_.
 
