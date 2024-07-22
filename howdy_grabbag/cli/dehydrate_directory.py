@@ -66,6 +66,58 @@ def find_files_to_process_AVI( directory_name = os.getcwd( ) ):
         return dict( 
             pool.map(lambda fname: ( fname, _get_bitrate_AVI( fname ) ), fnames ) )
 
+def process_single_directory_subtitles(
+    directory_name = os.getcwd( ), output_json_file = 'processed_stuff.json',
+    do_add_subtitle = False ):
+    assert( os.path.basename( output_json_file ).endswith( '.json' ) )
+    #
+    ## check whether whisper exists
+    _whisper_exec  = which( 'whisper' )
+    assert( _whisper_exec is not None )
+    #
+    ## if adding subtitle check whether mkvmerge exists
+    if do_add_subtitle:
+      _mkvmerge_exec = which( 'mkvmerge' )
+      assert( _mkvmerge_exec is not None )
+    fnames_dict = find_files_to_process(
+      directory_name = directory_name, do_hevc = True,
+      min_bitrate = 100 )
+    time00 = time.perf_counter( )
+    list_processed = [ 'found %02d files to subtitle in %s.' % (
+      len( fnames_dict ), os.path.abspath( directory_name ) ), ]
+    if do_add_subtitle: # all files must end in mkv
+      assert( all(map(lambda fname: os.path.basename( fname ).endswith('.mkv' ), fnames_dict ) ) )
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+    for idx, filename in enumerate(sorted( fnames_dict ) ):
+      time0 = time.perf_counter( )
+      stdout_val = subprocess.check_output(
+        [ _nice_exec, '-n', '19', _whisper_exec,
+          filename, '--output_format', 'srt', '--language', 'en' ],
+        stderr = subprocess.PIPE )
+      #
+      ## if adding subtitle
+      if do_add_subtitle:
+        subfile = os.path.basename( filename ).replace( '.mkv', '.srt' )
+        assert( os.path.isfile( subfile ) )
+        newfile = '%s-%s' % ( str( uuid.uuid4( ) ).split('-')[0].strip( ), os.path.basename( filename ).replace(":", "-" ) )
+        stdout_val = subprocess.check_output(
+          [ _mkvmerge_exec, '-o', newfile, filename, '--language', '0:eng', '--track-name', '0:English', subfile ],
+          stderr = subprocess.PIPE )
+        os.chmod( newfile, 0o644 )
+        os.rename( newfile, filename )
+      dt0 = time.perf_counter( ) - time0
+      logging.info( 'processed file %02d / %02d in %0.3f seconds' % (
+        idx + 1, len( fnames_dict ), dt0 ) )
+      list_processed.append( 'processed file %02d / %02d in %0.3f seconds' % (
+        idx + 1, len( fnames_dict ), dt0 ) )
+      json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+    dt00 = time.perf_counter( ) - time00
+    logging.info( 'took %0.3f seconds to process %d files' % (
+      dt00, len( fnames_dict ) ) )
+    list_processed.append( 'took %0.3f seconds to process %d files' % (
+      dt00, len( fnames_dict ) ) )
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+
 def process_single_directory(
     directory_name = os.getcwd( ), do_hevc = True, min_bitrate = 2_000,
     qual = 28, output_json_file = 'processed_stuff.json' ):
@@ -220,3 +272,27 @@ def main( ):
                 directory_name = args.directory,
                 qual = quality,
                 output_json_file = jsonfile )
+
+def main_subtitles( ):
+  parser = ArgumentParser( )
+  parser.add_argument( '-d', '--directory', dest='directory', type=str, action = 'store', default = os.getcwd( ),
+                       help = 'Name of the directory of MKV and MP4 files to dehydrate. Default is %s.' % os.getcwd( ) )
+  parser.add_argument( '--info', dest='do_info', action='store_true', default = False,
+                       help = 'If chosen, then turn on INFO logging.' )
+  parser.add_argument( '-J', '--jsonfile', dest = 'parser_dehydrate_jsonfile', metavar = 'JSONFILE', type = str, action = 'store', default =
+                       'processed_stuff.json',
+                       help = 'Name of the JSON file to store progress-as-you-go-along on directory dehydration. Default file name = "processed_stuff.json".' )
+  parser.add_argument( '-S', '--subtitle', dest = 'do_add_subtitle', action = 'store_true', default = False,
+                       help = 'If chosen, then AFTER subtitle creation, merge SRT subtitles with original file.' )
+  #
+  ## parsing arguments
+  time0 = time.perf_counter( )
+  args = parser.parse_args( )
+  logger = logging.getLogger( )
+  if args.do_info: logger.setLevel( logging.INFO )
+  jsonfile = os.path.expanduser( args.parser_dehydrate_jsonfile )
+  assert( os.path.basename( jsonfile ).endswith( '.json' ) )
+  process_single_directory_subtitles(
+    directory_name = args.directory,
+    output_json_file = jsonfile,
+    do_add_subtitle = args.do_add_subtitle )
