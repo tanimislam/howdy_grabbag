@@ -20,51 +20,51 @@ assert( _hcli_exec is not None )
 
 #
 def _get_ffprobe_json( filename ):
-    stdout_val = subprocess.check_output(
-        [ _ffprobe_exec, '-v', 'quiet', '-show_streams',
-         '-show_format', '-print_format', 'json', filename ],
-        stderr = subprocess.STDOUT )
-    file_info = json.loads( stdout_val )
-    return file_info
+  stdout_val = subprocess.check_output(
+    [ _ffprobe_exec, '-v', 'quiet', '-show_streams',
+      '-show_format', '-print_format', 'json', filename ],
+    stderr = subprocess.STDOUT )
+  file_info = json.loads( stdout_val )
+  return file_info
 
 def _get_hevc_bitrate( filename ):
-    try:
-        data = _get_ffprobe_json( filename )
-        info = {
-            'is_hevc' :  data['streams'][0]['codec_name'].lower( ) == 'hevc',
-            'bit_rate_kbps' : float( data['format']['bit_rate' ] ) / 1_024, }
-        return info
-    except: return None
+  try:
+    data = _get_ffprobe_json( filename )
+    info = {
+      'is_hevc' :  data['streams'][0]['codec_name'].lower( ) == 'hevc',
+      'bit_rate_kbps' : float( data['format']['bit_rate' ] ) / 1_024, }
+    return info
+  except: return None
 
 def _get_bitrate_AVI( filename ):
-    try:
-        data = _get_ffprobe_json( filename )
-        info = { 
-            'bit_rate_kbps' : float( data['format']['bit_rate' ] ) / 1_024, }
-        return info
-    except: return None
+  try:
+    data = _get_ffprobe_json( filename )
+    info = { 
+      'bit_rate_kbps' : float( data['format']['bit_rate' ] ) / 1_024, }
+    return info
+  except: return None
 
 def find_files_to_process( directory_name = os.getcwd( ), do_hevc = True, min_bitrate = 2_000 ):
-    fnames = sorted(
-        glob.glob( os.path.join( directory_name, '*.mp4' ) ) +
-        glob.glob( os.path.join( directory_name, '*.mkv' ) ) +
-        glob.glob( os.path.join( directory_name, '*.webm' ) ) )
-    with Pool( processes = cpu_count( ) ) as pool:
-        list_of_files_hevc_br = list(filter(
-            lambda tup: tup[1] is not None and tup[1]['bit_rate_kbps'] >= min_bitrate,
-            pool.map(lambda fname: ( fname, _get_hevc_bitrate( fname ) ), fnames ) ) )
-        if not do_hevc:
-            list_of_files_hevc_br = list(filter(lambda tup: tup[1]['is_hevc'] == False,
-                                                list_of_files_hevc_br ) )
-        return dict( list_of_files_hevc_br )
+  fnames = sorted(
+    glob.glob( os.path.join( directory_name, '*.mp4' ) ) +
+    glob.glob( os.path.join( directory_name, '*.mkv' ) ) +
+    glob.glob( os.path.join( directory_name, '*.webm' ) ) )
+  with Pool( processes = cpu_count( ) ) as pool:
+    list_of_files_hevc_br = list(filter(
+      lambda tup: tup[1] is not None and tup[1]['bit_rate_kbps'] >= min_bitrate,
+      pool.map(lambda fname: ( fname, _get_hevc_bitrate( fname ) ), fnames ) ) )
+    if not do_hevc:
+      list_of_files_hevc_br = list(filter(lambda tup: tup[1]['is_hevc'] == False,
+                                          list_of_files_hevc_br ) )
+    return dict( list_of_files_hevc_br )
 
 def find_files_to_process_AVI( directory_name = os.getcwd( ) ):
-    fnames = sorted(
-        glob.glob( os.path.join( directory_name, '*.avi' ) ) +
-        glob.glob( os.path.join( directory_name, '*.mpg' ) ) ) 
-    with Pool( processes = cpu_count( ) ) as pool:
-        return dict( 
-            pool.map(lambda fname: ( fname, _get_bitrate_AVI( fname ) ), fnames ) )
+  fnames = sorted(
+    glob.glob( os.path.join( directory_name, '*.avi' ) ) +
+    glob.glob( os.path.join( directory_name, '*.mpg' ) ) ) 
+  with Pool( processes = cpu_count( ) ) as pool:
+    return dict( 
+      pool.map(lambda fname: ( fname, _get_bitrate_AVI( fname ) ), fnames ) )
 
 def process_single_directory_subtitles(
     directory_name = os.getcwd( ), output_json_file = 'processed_stuff.json',
@@ -105,6 +105,7 @@ def process_single_directory_subtitles(
           stderr = subprocess.PIPE )
         os.chmod( newfile, 0o644 )
         os.rename( newfile, filename )
+        os.remove( subfile )
       dt0 = time.perf_counter( ) - time0
       logging.info( 'processed file %02d / %02d in %0.3f seconds' % (
         idx + 1, len( fnames_dict ), dt0 ) )
