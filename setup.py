@@ -61,10 +61,12 @@ setup(
             'rename_mkv_tv = howdy_grabbag.cli.rename_mkv_tv:main',
             'howdy_music_compilation = howdy_grabbag.cli.howdy_music:main_compilation',
             'howdy_music_individual = howdy_grabbag.cli.howdy_music:main_individual',
+            'howdy_music_add_spotify = howdy_grabbag.cli.howdy_music_add_spotify:main',
             'fix_permissions = howdy_grabbag.cli.fix_permissions:main',
             'dehydrate_tv_shows = howdy_grabbag.cli.dehydrate_tv_shows:main',
             'deavify_tv_shows = howdy_grabbag.cli.dehydrate_tv_shows:main_avis',
             'dehydrate_directory = howdy_grabbag.cli.dehydrate_directory:main',
+            'list_directory = howdy_grabbag.cli.dehydrate_directory:main_list',
             'subtitle_directory = howdy_grabbag.cli.dehydrate_directory:main_subtitles',
             ]
     },
