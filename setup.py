@@ -68,6 +68,7 @@ setup(
             'dehydrate_directory = howdy_grabbag.cli.dehydrate_directory:main',
             'list_directory = howdy_grabbag.cli.dehydrate_directory:main_list',
             'subtitle_directory = howdy_grabbag.cli.dehydrate_directory:main_subtitles',
+            'spotify_add_and_fix = howdy_grabbag.cli.spotify_add_and_fix:main',
             ]
     },
 )

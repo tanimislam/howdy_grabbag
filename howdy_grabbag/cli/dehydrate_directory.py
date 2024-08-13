@@ -252,7 +252,7 @@ def main_list( ):
                         help = 'Name of the directories of MKV and MP4 files to dehydrate. Default is %s.' % [ os.getcwd( ), ] )
     parser.add_argument( '-M', '--minbitrate', dest = 'minbitrate', type = int, action = 'store', default = 2_000,
                         help = ' '.join([
-                            'The minimum total bitrate (in kbps) of episodes to dehydrate. Must be >= 2000 kbps.',
+                            'The minimum total bitrate (in kbps) of episodes to dehydrate.',
                             'Default is 2000 kbps.']))
     parser.add_argument( '--info', dest='do_info', action='store_true', default = False,
                         help = 'If chosen, then turn on INFO logging.' )
@@ -264,7 +264,7 @@ def main_list( ):
     ## parsing arguments
     time0 = time.perf_counter( )
     args = parser.parse_args( )
-    assert( args.minbitrate >= 500 )
+    assert( args.minbitrate >= 0 )
     logger = logging.getLogger( )
     if args.do_info: logger.setLevel( logging.INFO )
     #
