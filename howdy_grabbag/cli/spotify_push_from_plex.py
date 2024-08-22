@@ -2,7 +2,7 @@ import os, sys, numpy, glob, pandas, time, datetime, logging, tabulate
 from pathos.multiprocessing import Pool, cpu_count
 from plexapi.server import PlexServer
 from howdy.core import core
-from howdy.music import music_spotify
+from howdy.music import music, music_spotify
 from argparse import ArgumentParser
 
 #
@@ -50,6 +50,16 @@ def print_plex_audio_playlists( df_plex_playlists_summary ):
         list(map(_get_data, range( df_plex_playlists_summary.shape[ 0 ] ) ) ),
         headers = headers ) )
 
+def create_spotify_public_playlist( name, description ):
+    oauth2_access_token = music_spotify.get_or_push_spotify_oauth2_token( )
+    assert( oauth2_access_token is not None )
+    status = music_spotify.create_public_playlist(
+        oauth2_access_token, name, description )
+    if not status:
+        print( "ERROR, SPOTIFY PUBLIC PLAYLIST WITH NAME = %s ALREADY EXISTS. JUST USE THAT ONE!" % name )
+        return
+    print( "SUCCESSFULLY CREATED SPOTIFY PUBLIC PLAYLIST WITH NAME = %s." % name )
+
 def print_spotify_public_playlists( ):
     oauth2_access_token = music_spotify.get_or_push_spotify_oauth2_token( )
     assert( oauth2_access_token is not None )
@@ -60,6 +70,72 @@ def print_spotify_public_playlists( ):
     print( 'summary info for %d public Spotify audio playlists.\n' % len( spotify_data_playlists ) )
     print( '%s\n' % tabulate.tabulate( data, headers = headers ) )
 
+def push_plex_to_spotify_playlist(
+    plex_playlist_name,
+    spotify_playlist_name,
+    numprocs = cpu_count( ) ):
+    #
+    ## first get the playlist
+    fullURL, token = core.checkServerCredentials( doLocal= True )
+    plex = PlexServer( fullURL, token )
+    playlists = list( filter(lambda playlist: playlist.title == plex_playlist_name and
+                             playlist.playlistType == 'audio', plex.playlists()))
+    if len( playlists ) == 0:
+        print( "ERROR, COULD FIND NO AUDIO PLEX PLAYLISTS = %s. EXITING..." % plex_playlist_name )
+        return False
+    #
+    ## now get the non-oauth2 spotify access token
+    spotify_access_token = music_spotify.get_spotify_session( )
+    assert( spotify_access_token is not None )
+    #
+    ## now get the SPOTIFY playlist
+    oauth2_access_token = music_spotify.get_or_push_spotify_oauth2_token( )
+    assert( oauth2_access_token is not None )
+    spotify_playlists = list(filter(lambda entry: entry['name'] == spotify_playlist_name,
+                                    music_spotify.get_public_playlists( oauth2_access_token ) ) )
+    if len( spotify_playlists ) != 1:
+        print( "ERROR, PUBLIC SPOTIFY PLAYLIST = %s DOES NOT EXIST." % spotify_playlist_name )
+        return False
+    spotify_playlist = spotify_playlists[ 0 ]
+    
+    playlist = playlists[ 0 ]
+    df_plex_playlist = music.plexapi_music_playlist_info( playlist, use_internal_metadata=True )
+    #
+    ## now put in the SPOTIFY ID column (and add in the appropriate entries where none are)
+    df_spotify_playlist = music_spotify.process_dataframe_playlist_spotify_multiproc(
+        df_plex_playlist, spotify_access_token, numprocs )
+    #
+    ## STATUS PRINTOUT
+    ngoods = df_spotify_playlist[ df_spotify_playlist[ 'SPOTIFY ID' ].str.startswith(
+        'spotify:track:' ) ].shape[ 0 ]
+    print( 'found %d / %d good SPOTIFY IDs in Plex audio playlist = %s.' % (
+        ngoods, df_spotify_playlist.shape[ 0 ], plex_playlist_name ) )
+    print( 'found %d tracks in public Spotify audio playlist = %s.' % (
+        spotify_playlist[ 'number of tracks' ], spotify_playlist[ 'name' ] ) )
+    #
+    ## now get the list of SPOTIFY IDs in the Plex audio playlist
+    spotify_ids_list = list(
+        df_spotify_playlist[
+            df_spotify_playlist['SPOTIFY ID'].str.startswith('spotify:track:') ]['SPOTIFY ID'] )
+    #
+    ## now get the list of SPOTIFY IDs in the public Spotify playlist
+    spotify_playlist_id = spotify_playlist[ 'id' ]
+    spotify_ids_in_playlist = music_spotify.get_existing_track_ids_in_spotify_playlist(
+            spotify_playlist_id, oauth2_access_token )
+    print( 'SUBTRACTING %d TRACKS FROM SPOTIFY PLAYLIST = %s.' % (
+        len( set( spotify_ids_in_playlist ) - set( spotify_ids_list ) ),
+        spotify_playlist_name ) )
+    print( 'ADDING %d TRACKS TO SPOTIFY PLAYLIST = %s.' % (
+        len( set( spotify_ids_list ) - set( spotify_ids_in_playlist ) ),
+        spotify_playlist_name ) )
+    #
+    ## NOW ACTUALLY CHANGE THE SPOTIFY PLAYLIST TO HAVE SAME TRACKS AS FOUND IN PLEX AUDIO PLAYLIST
+    music_spotify.modify_existing_playlist_with_new_tracks(
+        spotify_playlist_id, oauth2_access_token, spotify_ids_list,
+        spotify_ids_in_playlist = spotify_ids_in_playlist )
+    return True
+          
+    
 def main( ):
     time0 = time.perf_counter( )
     #
@@ -128,9 +204,20 @@ def main( ):
     elif args.choose_option == 'spotify_list':
         print_spotify_public_playlists( )
     elif args.choose_option == 'spotify_create':
-        pass
+        assert( args.name is not None )
+        assert( args.description is not None )
+        name = args.name.strip( )
+        description = args.description.strip( )
+        create_spotify_public_playlist( name, description )
     elif args.choose_option == 'push':
-        pass
+        assert( args.plex_input is not None )
+        assert( args.spotify_output is not None )
+        plex_playlist_name = args.plex_input.strip( )
+        spotify_playlist_name = args.spotify_output.strip( )
+        status = push_plex_to_spotify_playlist(
+            plex_playlist_name,
+            spotify_playlist_name,
+            numprocs = cpu_count( ) )
     #
     ## how long did this take?
     print( 'took %0.3f seconds to process.' % ( time.perf_counter( ) - time0 ) )
