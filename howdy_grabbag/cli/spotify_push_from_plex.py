@@ -73,7 +73,10 @@ def print_spotify_public_playlists( ):
 def push_plex_to_spotify_playlist(
     plex_playlist_name,
     spotify_playlist_name,
-    numprocs = cpu_count( ) ):
+    numprocs = cpu_count( ),
+    npurify = 1 ):
+    assert( numprocs >= 1 )
+    assert( npurify >= 0 )
     #
     ## first get the playlist
     fullURL, token = core.checkServerCredentials( doLocal= True )
@@ -97,6 +100,7 @@ def push_plex_to_spotify_playlist(
         print( "ERROR, PUBLIC SPOTIFY PLAYLIST = %s DOES NOT EXIST." % spotify_playlist_name )
         return False
     spotify_playlist = spotify_playlists[ 0 ]
+    my_userid = spotify_playlist[ 'user id' ]
     
     playlist = playlists[ 0 ]
     df_plex_playlist = music.plexapi_music_playlist_info( playlist, use_internal_metadata=True )
@@ -106,20 +110,22 @@ def push_plex_to_spotify_playlist(
         df_plex_playlist, spotify_access_token, numprocs )
     #
     ## HACKISH FIX trying to fix the bad
-    with Pool( processes = numprocs ) as pool: 
-        ngoods_rows_tuples = list(
-            pool.map(
-              lambda idx: music_spotify.process_dataframe_playlist_spotify_bads(
-                  df_spotify_playlist[idx::numprocs], spotify_access_token ),
-              range( numprocs ) ) )
-        ngoods_tots = sum(list(map(lambda tup: tup[0], ngoods_rows_tuples ) ) )
-        nrows_tots  = sum(list(map(lambda tup: tup[1], ngoods_rows_tuples ) ) )
-        print( 'fixed total of %d / %d bad SPOTIFY IDs in Plex audio playlist = %s.' % (
-            ngoods_tots, nrows_tots, plex_playlist_name ) )
-    #
-    ## we have not MODIFIED the plex playlist, but getting the spotify playlist AGAIN
-    df_spotify_playlist = music_spotify.process_dataframe_playlist_spotify_multiproc(
-        df_plex_playlist, spotify_access_token, numprocs )
+    for iteration in range( npurify ):
+        with Pool( processes = numprocs ) as pool: 
+            ngoods_rows_tuples = list(
+                pool.map(
+                lambda idx: music_spotify.process_dataframe_playlist_spotify_bads(
+                    df_spotify_playlist[idx::numprocs], spotify_access_token ),
+                range( numprocs ) ) )
+            ngoods_tots = sum(list(map(lambda tup: tup[0], ngoods_rows_tuples ) ) )
+            nrows_tots  = sum(list(map(lambda tup: tup[1], ngoods_rows_tuples ) ) )
+            print( 'in iteration %d / %d fixed total of %d / %d bad SPOTIFY IDs in Plex audio playlist = %s.' % (
+                iteration + 1, npurify, ngoods_tots, nrows_tots, plex_playlist_name ) )
+            if nrows_tots == 0: break
+        #
+        ## we have not MODIFIED the plex playlist, but getting the spotify playlist AGAIN
+        df_spotify_playlist = music_spotify.process_dataframe_playlist_spotify_multiproc(
+            df_plex_playlist, spotify_access_token, numprocs )
     
     #
     ## STATUS PRINTOUT
@@ -137,8 +143,20 @@ def push_plex_to_spotify_playlist(
     #
     ## now get the list of SPOTIFY IDs in the public Spotify playlist
     spotify_playlist_id = spotify_playlist[ 'id' ]
-    spotify_ids_in_playlist = music_spotify.get_existing_track_ids_in_spotify_playlist(
-            spotify_playlist_id, oauth2_access_token )
+    spotify_ids_in_playlist = None
+    for iteration in range( 15 ):
+        try:
+            spotify_ids_in_playlist = music_spotify.get_existing_track_ids_in_spotify_playlist(
+                spotify_playlist_id, oauth2_access_token )
+            break
+        except:
+            print( 'failed iteration %02d / 15. Trying again...' % ( iteration + 1 ) )
+            time.sleep( 1.0 )
+            pass
+    if spotify_ids_in_playlist is None:
+        print( "ERROR, IN 15 TRIES COULD NOT GET COLLECTION OF SPOTIFY IDS IN SPOTIFY PLAYLIST = $s." %
+              spotify_playlist_name )
+        return False
     print( 'SUBTRACTING %d TRACKS FROM SPOTIFY PLAYLIST = %s.' % (
         len( set( spotify_ids_in_playlist ) - set( spotify_ids_list ) ),
         spotify_playlist_name ) )
@@ -201,6 +219,14 @@ def main( ):
     subparsers_push.add_argument(
         '-o', '--output', dest = 'spotify_output', type = str, action = 'store',
         help = "The output public SPOTIFY playlist. Intent = the public SPOTIFY playlist's songs will MATCH the PLEX AUDIO playlist's collection of SPOTIFY identified songs." )
+    subparsers_push.add_argument(
+        '-N', '--nprocs', dest = 'numprocs', type = int, action = 'store', default = cpu_count( ),
+        help = 'The number of processors used to perform the calculations. Must be >= 1. Default = %d.' % cpu_count( ) )
+    subparsers_push.add_argument(
+        '-M', '--npurify', dest = 'npurify', type = int, action = 'store', default = 0,
+        help = ' '.join([
+            'The number of times to PURIFY the finding-spotify-ids in our Plex audio playlist. Must be >= 0.'
+            'Default is 0.' ]) )
     #
     ## now do the needful
     args = parser.parse_args( )
@@ -229,12 +255,15 @@ def main( ):
     elif args.choose_option == 'push':
         assert( args.plex_input is not None )
         assert( args.spotify_output is not None )
+        assert( args.numprocs >= 1 )
+        assert( args.npurify >= 0 )
         plex_playlist_name = args.plex_input.strip( )
         spotify_playlist_name = args.spotify_output.strip( )
         status = push_plex_to_spotify_playlist(
             plex_playlist_name,
             spotify_playlist_name,
-            numprocs = cpu_count( ) )
+            numprocs = args.numprocs,
+            npurify = args.npurify )
     #
     ## how long did this take?
     print( 'took %0.3f seconds to process.' % ( time.perf_counter( ) - time0 ) )
