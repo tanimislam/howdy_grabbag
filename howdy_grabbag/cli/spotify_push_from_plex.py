@@ -105,6 +105,23 @@ def push_plex_to_spotify_playlist(
     df_spotify_playlist = music_spotify.process_dataframe_playlist_spotify_multiproc(
         df_plex_playlist, spotify_access_token, numprocs )
     #
+    ## HACKISH FIX trying to fix the bad
+    with Pool( processes = numprocs ) as pool: 
+        ngoods_rows_tuples = list(
+            pool.map(
+              lambda idx: music_spotify.process_dataframe_playlist_spotify_bads(
+                  df_spotify_playlist[idx::numprocs], spotify_access_token ),
+              range( numprocs ) ) )
+        ngoods_tots = sum(list(map(lambda tup: tup[0], ngoods_rows_tuples ) ) )
+        nrows_tots  = sum(list(map(lambda tup: tup[1], ngoods_rows_tuples ) ) )
+        print( 'fixed total of %d / %d bad SPOTIFY IDs in Plex audio playlist = %s.' % (
+            ngoods_tots, nrows_tots, plex_playlist_name ) )
+    #
+    ## we have not MODIFIED the plex playlist, but getting the spotify playlist AGAIN
+    df_spotify_playlist = music_spotify.process_dataframe_playlist_spotify_multiproc(
+        df_plex_playlist, spotify_access_token, numprocs )
+    
+    #
     ## STATUS PRINTOUT
     ngoods = df_spotify_playlist[ df_spotify_playlist[ 'SPOTIFY ID' ].str.startswith(
         'spotify:track:' ) ].shape[ 0 ]
