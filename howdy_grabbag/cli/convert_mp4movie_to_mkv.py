@@ -93,10 +93,14 @@ def create_mkv_file( mp4movie, name, year,
     put_info_mp4movie( mp4movie, name, year )
     logging.debug( 'FFMPEG COMMAND: %s' % ' '.join(
         [ ffmpeg_exec, '-y', '-i', mp4movie,
-         '-codec', 'copy', "file:%s" % newfile ] ) )
+         '-acodec', 'copy',
+         '-vcodec', 'copy',
+         '-sn', "file:%s" % newfile ] ) )
     stdout_val = subprocess.check_output(
         [ ffmpeg_exec, '-y', '-i', mp4movie,
-         '-codec', 'copy', "file:%s" % newfile ],
+         '-acodec', 'copy',
+         '-vcodec', 'copy',
+         '-sn', "file:%s" % newfile ],
         stderr = subprocess.STDOUT )
     #
     if srtfile is not None:
@@ -127,6 +131,7 @@ def create_mkv_file( mp4movie, name, year,
         os.chmod( newfile, 0o644 )
         
     logging.info( 'created %s in %0.3f seconds.' % ( newfile, time.perf_counter( ) - time0 ) )
+    return newfile
 
 def main( ):
     parser = ArgumentParser( )
