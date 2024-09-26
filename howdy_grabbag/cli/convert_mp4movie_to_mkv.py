@@ -89,7 +89,7 @@ def create_mkv_file( mp4movie, name, year,
     newfile = os.path.abspath(
         os.path.join(
             os.path.expanduser( outdir ),
-            '%s (%d).mkv' % ( titlecase.titlecase( name ), year ) ) )
+            '%s (%d).mkv' % ( titlecase.titlecase( name ).replace('/','-' ), year ) ) )
     put_info_mp4movie( mp4movie, name, year )
     logging.debug( 'FFMPEG COMMAND: %s' % ' '.join(
         [ ffmpeg_exec, '-y', '-i', mp4movie,
