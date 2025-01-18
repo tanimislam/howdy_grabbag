@@ -135,9 +135,9 @@ def create_mkv_file( mp4movie, name, year,
 
 def main( ):
     parser = ArgumentParser( )
-    parser.add_argument( '--mp4', dest='mp4', type=str, action='store',
+    parser.add_argument( '-M', '--mp4', dest='mp4', type=str, action='store',
                        help = 'Name of the MP4 movie file name.', required = True )
-    parser.add_argument( '--srt', dest='srt', type=str, action='store',
+    parser.add_argument( '-S', '--srt', dest='srt', type=str, action='store',
                        help = 'Name of the SRT subtitle file associated with the movie.' )
     parser.add_argument( '-n', '--name', dest='name', type=str, action='store',
                        help = 'Name of the movie.', required = True )
