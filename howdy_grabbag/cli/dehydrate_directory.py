@@ -288,8 +288,8 @@ def main_list( ):
     data_AVI = list( zip(
         map(os.path.basename, sorted( fnames_dict_AVI ) ),
         map(lambda fname: '%0.1f' % fnames_dict_AVI[ fname ][ 'bit_rate_kbps' ], sorted( fnames_dict_AVI ) ) ) )
-    print( 'found %02d valid files in %s.\n' % (
-        len( fnames_dict_AVI ), os.path.abspath( args.directory ) ) )
+    print( 'found %02d valid files in %s with min bitrate >= %d kbps.\n' % (
+        len( fnames_dict_AVI ), directory_names, args.minbitrate ) )
     print( '%s\n' % tabulate( data_AVI, headers = [ 'FILENAME', 'KBPS' ] ) )
     print( 'took %0.3f seconds to process.' % ( time.perf_counter( ) - time0 ) )
 
