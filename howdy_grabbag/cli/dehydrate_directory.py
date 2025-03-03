@@ -175,17 +175,22 @@ def process_multiple_directories_AVI(
     json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
     for idx, filename in enumerate(sorted( fnames_dict ) ):
         time0 = time.perf_counter( )
+        directory_name = os.path.dirname( filename )
+        replacfile = os.path.join(
+            directory_name, os.path.basename( filename ).replace('.avi', '.mkv' ) )
         newfile = '.'.join(
             os.path.basename( filename ).replace(":", "-").split('.')[:-1] + [ 'mkv', ] )
+        newfile = '%s-%s' % ( str( uuid.uuid4( ) ).split('-')[0].strip( ), newfile )
         stdout_val = subprocess.check_output([
             _nice_exec, '-n', '19', _hcli_exec,
             '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-E', 'av_aac', '-B', '160',
             '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
             '-o', newfile ],
             stderr = subprocess.PIPE )
+        logging.error( stdout_val.decode( 'utf8' ) )
         #
         os.chmod(newfile, 0o644 )
-        shutil.move( newfile, directory_name )
+        os.rename( newfile, replacfile )
         os.remove( filename )
         dt0 = time.perf_counter( ) - time0
         logging.info( 'processed file %02d / %02d in %0.3f seconds' % (
