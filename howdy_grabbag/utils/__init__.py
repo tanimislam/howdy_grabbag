@@ -13,7 +13,7 @@ def find_ffmpeg_exec( ):
     ffmpeg_exec = which( 'ffmpeg', path='/usr/bin')
     if ffmpeg_exec is None: return None
     if os.access( ffmpeg_exec, os.X_OK ): return ffmpeg_exec
-    return None   
+    return None
 
 def create_epdicts_from_jsonfile( jsonfile ):
     assert( os.path.exists( jsonfile ) )
@@ -22,7 +22,7 @@ def create_epdicts_from_jsonfile( jsonfile ):
                                for idx in epdicts_sub[seasno] } for seasno in epdicts_sub }
     return epdicts
 
-def rename_files_in_directory( epdicts, series_name, seasno = 1, dirname = os.getcwd( ) ):
+def rename_files_in_directory( epdicts, series_name, seasno = 1, dirname = "." ):
     time0 = time.perf_counter( )
     filedict = { idx + 1:filename for (idx, filename) in enumerate(
         sorted(chain.from_iterable(map(lambda suffix: glob.glob( os.path.join( dirname, "*.%s" % suffix ) ),
@@ -41,7 +41,7 @@ def process_mp4_srt_eps_to_mkv(
     epdicts, series_name, seasno = 1, srtglob = '*.srt',
     ffmpeg_exec = which( 'ffmpeg' ),
     mkvmerge_exec = which( 'mkvmerge' ),
-    dirname = os.getcwd( ) ):
+    dirname = "." ):
     #
     assert( ffmpeg_exec is not None )
     assert( mkvmerge_exec is not None )
