@@ -66,6 +66,7 @@ setup(
             'dehydrate_tv_shows = howdy_grabbag.cli.dehydrate_tv_shows:main',
             'deavify_tv_shows = howdy_grabbag.cli.dehydrate_tv_shows:main_avis',
             'dehydrate_directory = howdy_grabbag.cli.dehydrate_directory:main',
+            'dehydrate_files = howdy_grabbag.cli.dehydrate_directory:main_dehydrate_files',
             'list_directory = howdy_grabbag.cli.dehydrate_directory:main_list',
             'subtitle_directory = howdy_grabbag.cli.dehydrate_directory:main_subtitles',
             'spotify_add_and_fix = howdy_grabbag.cli.spotify_add_and_fix:main',
