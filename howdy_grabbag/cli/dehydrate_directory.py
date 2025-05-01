@@ -206,37 +206,37 @@ def process_multiple_directories_AVI(
 
 def process_multiple_files(
     file_names, qual = 28, output_json_file = 'processed_stuff.json' ):
-  #
-  assert( os.path.basename( output_json_file ).endswith( '.json' ) )
-  act_file_names = sorted(filter(os.path.isfile,
-                                 set(map(os.path.realpath, file_names))))
-  time00 = time.perf_counter( )
-  list_processed = [ 'found %02d files to dehydrate.' % ( len( act_file_names ) ), ]
-  json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
-  for idx, filename in enumerate( act_file_names ):
-    time0 = time.perf_counter( )
-    newfile = '%s-%s' % ( str( uuid.uuid4( ) ).split('-')[0].strip( ), os.path.basename( filename ).replace(":", "-" ) )
-    stdout_val = subprocess.check_output([
-      _nice_exec, '-n', '19', _hcli_exec,
-      '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-E', 'av_aac', '-B', '160',
-      '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
-      '-s', ','.join(map(lambda num: '%d' % num, range(1,35))),
-      '-o', newfile ], stderr = subprocess.PIPE )
     #
-    os.chmod(newfile, 0o644 )
-    shutil.move( newfile, filename )
-    dt0 = time.perf_counter( ) - time0
-    logging.info( 'processed file %02d / %02d in %0.3f seconds' % (
-      idx + 1, len( fnames_dict ), dt0 ) )
-    list_processed.append( 'processed file %02d / %02d in %0.3f seconds' % (
-      idx + 1, len( fnames_dict ), dt0 ) )
+    assert( os.path.basename( output_json_file ).endswith( '.json' ) )
+    act_file_names = sorted(filter(os.path.isfile,
+                                   set(map(os.path.realpath, file_names))))
+    time00 = time.perf_counter( )
+    list_processed = [ 'found %02d files to dehydrate.' % ( len( act_file_names ) ), ]
     json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
-  dt00 = time.perf_counter( ) - time00
-  logging.info( 'took %0.3f seconds to process %d files' % (
-    dt00, len( act_file_names ) ) )
-  list_processed.append( 'took %0.3f seconds to process %d files' % (
-    dt00, len( act_file_names ) ) )
-  json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+    for idx, filename in enumerate( act_file_names ):
+        time0 = time.perf_counter( )
+        newfile = '%s-%s' % ( str( uuid.uuid4( ) ).split('-')[0].strip( ), os.path.basename( filename ).replace(":", "-" ) )
+        stdout_val = subprocess.check_output([
+            _nice_exec, '-n', '19', _hcli_exec,
+            '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-E', 'av_aac', '-B', '160',
+            '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
+            '-s', ','.join(map(lambda num: '%d' % num, range(1,35))),
+            '-o', newfile ], stderr = subprocess.PIPE )
+        #
+        os.chmod(newfile, 0o644 )
+        shutil.move( newfile, filename )
+        dt0 = time.perf_counter( ) - time0
+        logging.info( 'processed file %02d / %02d in %0.3f seconds' % (
+            idx + 1, len( act_file_names ), dt0 ) )
+        list_processed.append( 'processed file %02d / %02d in %0.3f seconds' % (
+            idx + 1, len( act_file_names ), dt0 ) )
+        json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+    dt00 = time.perf_counter( ) - time00
+    logging.info( 'took %0.3f seconds to process %d files' % (
+        dt00, len( act_file_names ) ) )
+    list_processed.append( 'took %0.3f seconds to process %d files' % (
+        dt00, len( act_file_names ) ) )
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
     
 def main( ):
     parser = ArgumentParser( )
