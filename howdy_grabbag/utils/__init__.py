@@ -79,3 +79,43 @@ def process_mp4_srt_eps_to_mkv(
     #
     print( 'processed all %02d files in %0.3f seconds.' % (
         len( mp4files ), time.perf_counter( ) - time00 ) ) 
+
+def process_mp4_srt_eps_to_mkv_simple(
+    srtglob = '*.srt',
+    ffmpeg_exec = which( 'ffmpeg' ),
+    mkvmerge_exec = which( 'mkvmerge' ),
+    dirname = "." ):
+    #
+    assert( ffmpeg_exec is not None )
+    assert( mkvmerge_exec is not None )
+    mp4files = sorted(glob.glob( os.path.join( dirname, '*.mp4' ) ) )
+    srtfiles = sorted(glob.glob( os.path.join( dirname, srtglob ) ) )
+    assert( len(mp4files) == len(srtfiles))
+    #epdicts_max = set(map(lambda idx: idx + starteps, range(len(mp4files))))
+    #assert( len( epdicts_max - set( epdicts[ seasno ] ) ) == 0 )
+    assert( all(map(os.path.exists, ( ffmpeg_exec, mkvmerge_exec ) ) ) )
+    #
+    time00 = time.perf_counter( )
+    for idx, tup in enumerate(zip( mp4files, srtfiles ) ):
+        time0 = time.perf_counter( )
+        mp4file, srtfile = tup
+        newfile = os.path.join( dirname, os.path.basename( mp4file ).replace( '.mp4', '.mkv' ) )
+        stdout_val = subprocess.check_output([
+            ffmpeg_exec, '-y', '-i', mp4file, '-codec', 'copy', 'file:%s' % newfile ],
+                                             stderr = subprocess.PIPE )
+        try:
+            stdout_val = subprocess.check_output([
+                mkvmerge_exec, '-o', os.path.join( dirname, 'default.mkv' ), newfile,
+                '--language', '0:eng', '--track-name', '0:English', srtfile ],
+                                                 stderr = subprocess.PIPE )
+        except Exception as e:
+            pass
+        os.rename( os.path.join( dirname, 'default.mkv' ), newfile )
+        os.chmod( newfile, 0o644 )
+        os.remove( mp4file )
+        os.remove( srtfile )
+        print( 'processed file %02d / %02d in %0.3f seconds.' % (
+            idx + 1, len( mp4files ), time.perf_counter( ) - time0 ) )
+    #
+    print( 'processed all %02d files in %0.3f seconds.' % (
+        len( mp4files ), time.perf_counter( ) - time00 ) ) 
