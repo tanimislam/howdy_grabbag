@@ -68,11 +68,11 @@ def create_mkv_file(
 
 def main( ):
     parser = ArgumentParser( )
-    parser.add_argument( '--mp4', dest='mp4', type=str, action='store',
+    parser.add_argument( '-M', '--mp4', dest='mp4', type=str, action='store',
                        help = 'Name of the MP4 TV file name.', required = True )
-    parser.add_argument( '--srt', dest='srt', type=str, action='store',
+    parser.add_argument( '-S', '--srt', dest='srt', type=str, action='store',
                        help = 'Name of the SRT subtitle file associated with the TV file.' )
-    parser.add_argument( '-S', '--series', dest='seriesName', type=str, action='store',
+    parser.add_argument( '-s', '--series', dest='seriesName', type=str, action='store',
                        help = 'Name of the TV show.', required = True )
     parser.add_argument( '-e', '--epstring', dest='epstring', type=str, action='store',
                         help = 'The episode string, in the form S%%02dE%%02d.' )

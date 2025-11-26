@@ -26,7 +26,7 @@ def rename_files_in_directory( epdicts, series_name, seasno = 1, dirname = "." )
     time0 = time.perf_counter( )
     filedict = { idx + 1:filename for (idx, filename) in enumerate(
         sorted(chain.from_iterable(map(lambda suffix: glob.glob( os.path.join( dirname, "*.%s" % suffix ) ),
-                                       ( "mp4", "avi", "mkv", "wmv", "flv", "webm", "m4v" ))))) }
+                                       ( "mp4", "avi", "mpg", "mkv", "wmv", "flv", "webm", "m4v" ))))) }
     assert( seasno in epdicts )
     assert( len( set( epdicts[ seasno ] ) - set( filedict ) ) == 0 )
     for epno in sorted( filedict ):
