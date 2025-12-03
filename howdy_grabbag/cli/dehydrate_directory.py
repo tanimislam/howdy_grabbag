@@ -5,6 +5,7 @@ This goes through *multiple* directories you specify, and tries to *shrink*  *sh
 """
 import os, sys, logging, time, pandas, numpy, json, subprocess, shutil, uuid, glob
 from tabulate import tabulate
+from itertools import chain
 from howdy_grabbag.utils.dehydrate import (
     find_files_to_process,
     find_files_to_process_AVI,
@@ -14,6 +15,15 @@ from howdy_grabbag.utils.dehydrate import (
     process_multiple_files )
     
 from argparse import ArgumentParser
+
+def _get_directory_names( all_directories ):
+    directories_not_globs = set(filter(lambda dirname: '*' not in dirname, all_directories ) )
+    directories_globs     = set(filter(lambda dirname: '*' in dirname, all_directories ) )
+    directory_names_1 = set(filter(os.path.isdir, map(lambda dirname: os.path.realpath( os.path.expanduser( dirname ) ), directories_not_globs ) ) )
+    directory_names_2 = set(filter(os.path.isdir, map(lambda dirname: os.path.realpath( os.path.expanduser( dirname ) ),
+                                                      chain.from_iterable(map(lambda globdir: glob.glob( globdir ), directories_globs ) ) ) ) )
+    directory_names   = sorted( directory_names_1 | directory_names_2 )
+    return directory_names
 
 
 def main( ):
@@ -44,7 +54,7 @@ def main( ):
     logger = logging.getLogger( )
     if args.do_info: logger.setLevel( logging.INFO )
     #
-    directory_names = sorted(set(filter(os.path.isdir, map(lambda dirname: os.path.realpath( os.path.expanduser( dirname ) ), args.directories ) ) ) )
+    directory_names = _get_directory_names( args.directories )
     #
     ## dehydrate directory
     quality = args.parser_dehydrate_quality
@@ -84,7 +94,8 @@ def main_list( ):
     logger = logging.getLogger( )
     if args.do_info: logger.setLevel( logging.INFO )
     #
-    directory_names = sorted(set(filter(os.path.isdir, map(lambda dirname: os.path.realpath( os.path.expanduser( dirname ) ), args.directories ) ) ) )
+    directory_names = _get_directory_names( args.directories )
+    #directory_names = sorted(set(filter(os.path.isdir, map(lambda dirname: os.path.realpath( os.path.expanduser( dirname ) ), args.directories ) ) ) )
     #
     ## list filenames
     if not args.do_avi:
