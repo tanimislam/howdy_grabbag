@@ -1,4 +1,4 @@
-"""
+r"""
 This goes through your Plex_ TV library, on your *local* server, and tries to *shrink* episodes (using HEVC_ video quality 28) that start off with a bit rate *above* a certain level, by default 2000 kbps.
 
 Lots of words, huh?
@@ -241,7 +241,7 @@ def process_single_show_avi( df_sub, showname, qual = 20 ):
     for idx, filename in enumerate(episodes_sorted):
         time0 = time.perf_counter( )
         dirname = os.path.dirname( filename )
-        newfile = re.sub( '\.avi$', '.mkv', os.path.basename( filename ) )
+        newfile = re.sub( r'\.avi$', '.mkv', os.path.basename( filename ) )
         try:
             stdout_val = subprocess.check_output([
                 nice_exec, '-n', '19', hcli_exec,
@@ -466,4 +466,46 @@ def process_multiple_files(
     list_processed.append( 'took %0.3f seconds to process %d files' % (
         dt00, len( act_file_names ) ) )
     json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+
+
+def process_multiple_files_AVI(
+    file_names, qual = 28, output_json_file = 'processed_stuff.json' ):
+    #
+    assert( os.path.basename( output_json_file ).endswith( '.json' ) )
+    act_file_names = sorted(filter(os.path.isfile,
+                                   set(map(os.path.realpath, file_names))))
+    time00 = time.perf_counter( )
+    list_processed = [ 'found %02d files to dehydrate.' % ( len( act_file_names ) ), ]
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+    for idx, filename in enumerate( act_file_names ):
+        time0 = time.perf_counter( )
+        replacfile = os.path.join(
+            directory_name, os.path.basename( filename ).replace('.avi', '.mkv' ).replace( ".mpg", ".mkv" ) )
+        newfile = '.'.join(
+            os.path.basename( filename ).replace(":", "-").split('.')[:-1] + [ 'mkv', ] )
+        newfile = '%s-%s' % ( str( uuid.uuid4( ) ).split('-')[0].strip( ), newfile )
+        stdout_val = subprocess.check_output([
+            _nice_exec, '-n', '19', _hcli_exec,
+            '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-E', 'av_aac', '-B', '160',
+            '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
+            '-o', newfile ],
+            stderr = subprocess.PIPE )
+        logging.error( stdout_val.decode( 'utf8' ) )
+        #
+        os.chmod(newfile, 0o644 )
+        os.rename( newfile, replacfile )
+        os.remove( filename )
+        dt0 = time.perf_counter( ) - time0
+        logging.info( 'processed file %02d / %02d in %0.3f seconds' % (
+            idx + 1, len( fnames_dict ), dt0 ) )
+        list_processed.append( 'processed file %02d / %02d in %0.3f seconds' % (
+            idx + 1, len( fnames_dict ), dt0 ) )
+        json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+    dt00 = time.perf_counter( ) - time00
+    logging.info( 'took %0.3f seconds to process %d files' % (
+        dt00, len( act_file_names ) ) )
+    list_processed.append( 'took %0.3f seconds to process %d files' % (
+        dt00, len( act_file_names ) ) )
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+    
     

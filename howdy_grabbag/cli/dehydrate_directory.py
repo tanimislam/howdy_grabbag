@@ -12,7 +12,8 @@ from howdy_grabbag.utils.dehydrate import (
     process_multiple_directories,
     process_multiple_directories_AVI,
     process_multiple_directories_subtitles,
-    process_multiple_files )
+    process_multiple_files,
+    process_multiple_files_AVI )
     
 from argparse import ArgumentParser
 
@@ -171,13 +172,15 @@ def main_dehydrate_files( ):
     #
     ## dehydrate files
     quality = args.parser_dehydrate_quality
-    jsonfile = os.path.expanduser( args.parser_dehydrate_jsonfile )
+    jsonfile = os.path.realpath( os.path.expanduser( args.parser_dehydrate_jsonfile ) )
     assert( os.path.basename( jsonfile ).endswith( '.json' ) )
     assert( quality >= 20 )
     if not args.do_avi:
         process_multiple_files(
             args.inputfiles, qual = quality,
             output_json_file = jsonfile )
-    else:
-        print( "TODO: putting in functionality to dehydrate AVI and MPEG files in the future." )
         return
+    #
+    process_multiple_files_AVI(
+        args.inputfiles, qual = quality,
+        output_json_file = jsonfile )
