@@ -19,14 +19,16 @@ from tabulate import tabulate
 from itertools import chain
 from shutil import which
 
-_ffmpeg_exec  = which( 'ffmpeg' )
-_ffprobe_exec = which( 'ffprobe' )
-_nice_exec    = which( 'nice' )
-_hcli_exec    = which( 'HandBrakeCLI' )
+_ffmpeg_exec      = which( 'ffmpeg' )
+_ffprobe_exec     = which( 'ffprobe' )
+_nice_exec        = which( 'nice' )
+_hcli_exec        = which( 'HandBrakeCLI' )
+_mkvpropedit_exec = which( 'mkvpropedit' )
 assert( _ffmpeg_exec is not None )
 assert( _ffprobe_exec is not None )
 assert( _nice_exec is not None )
 assert( _hcli_exec is not None )
+assert( _mkvpropedit_exec is not None )
 
 #
 def _get_ffprobe_json( filename ):
@@ -178,12 +180,6 @@ def summarize_single_show( df_sub, showname, minbitrate, mode_dataformat = DATAF
 
 def process_single_show( df_sub, showname, do_hevc = True, qual = 28 ):
     #
-    ## check we have nice and HandBrakeCLI
-    nice_exec = find_executable( 'nice' )
-    hcli_exec = find_executable( 'HandBrakeCLI' )
-    assert( nice_exec is not None )
-    assert( hcli_exec is not None )
-    #
     df_show = single_show_summary_dataframe( df_sub, showname )
     df_show_sub = df_show.copy( )
     if not do_hevc:
@@ -198,14 +194,17 @@ def process_single_show( df_sub, showname, do_hevc = True, qual = 28 ):
         time0 = time.perf_counter( )
         newfile = os.path.basename( filename )
         stdout_val = subprocess.check_output([
-            nice_exec, '-n', '19', hcli_exec,
+            _nice_exec, '-n', '19', _hcli_exec,
             '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-B', '160',
             '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
             '-s', ','.join(map(lambda num: '%d' % num, range(1,35))),
-            '-o', newfile ],
-            stderr = subprocess.PIPE )
+            '-o', newfile ], stderr = subprocess.PIPE )
         #
-        os.chmod(newfile, 0o644 )
+        if newfile.endswith( '.mkv' ):
+            stdout_val = subprocess.check_output([
+                _nice_exec, '-n', '19', _mkvpropedit_exec,
+                newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
+        os.chmod(newfile, 0o644 )   
         shutil.move( newfile, filename )
         dt0 = time.perf_counter( ) - time0
         print('processed episode %02d / %02d in %0.3f seconds' % (
@@ -221,12 +220,6 @@ def process_single_show( df_sub, showname, do_hevc = True, qual = 28 ):
     json.dump( list_processed, open( 'processed_stuff.json', 'w' ), indent = 1 )
 
 def process_single_show_avi( df_sub, showname, qual = 20 ):
-    #
-    ## check we have nice and HandBrakeCLI
-    nice_exec = find_executable( 'nice' )
-    hcli_exec = find_executable( 'HandBrakeCLI' )
-    assert( nice_exec is not None )
-    assert( hcli_exec is not None )
     #
     df_show_sub = single_show_summary_dataframe(
         df_sub, showname, mode_dataformat = DATAFORMAT.IS_AVI_OR_MPEG )
@@ -244,11 +237,15 @@ def process_single_show_avi( df_sub, showname, qual = 20 ):
         newfile = re.sub( r'\.avi$', '.mkv', os.path.basename( filename ) )
         try:
             stdout_val = subprocess.check_output([
-                nice_exec, '-n', '19', hcli_exec,
+                _nice_exec, '-n', '19', _hcli_exec,
                 '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-B', '160',
                 '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
                 '-o', newfile ],
                 stderr = subprocess.PIPE )
+            #
+            stdout_val = subprocess.check_output([
+                _nice_exec, '-n', '19', _mkvpropedit_exec,
+                newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
             #
             os.chmod(newfile, 0o644 )
             shutil.move( newfile, dirname )
@@ -375,6 +372,11 @@ def process_multiple_directories(
             '-o', newfile ],
             stderr = subprocess.PIPE )
         #
+        if newfile.endswith( '.mkv' ):
+            stdout_val = subprocess.check_output([
+                _nice_exec, '-n', '19', _mkvpropedit_exec,
+                newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
+        #
         os.chmod(newfile, 0o644 )
         shutil.move( newfile, filename )
         dt0 = time.perf_counter( ) - time0
@@ -417,6 +419,10 @@ def process_multiple_directories_AVI(
             stderr = subprocess.PIPE )
         logging.error( stdout_val.decode( 'utf8' ) )
         #
+        stdout_val = subprocess.check_output([
+            _nice_exec, '-n', '19', _mkvpropedit_exec,
+            newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
+        #
         os.chmod(newfile, 0o644 )
         os.rename( newfile, replacfile )
         os.remove( filename )
@@ -451,6 +457,11 @@ def process_multiple_files(
             '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
             '-s', ','.join(map(lambda num: '%d' % num, range(1,35))),
             '-o', newfile ], stderr = subprocess.PIPE )
+        #
+        if newfile.endswith( '.mkv' ):
+            stdout_val = subprocess.check_output([
+                _nice_exec, '-n', '19', _mkvpropedit_exec,
+                newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
         #
         os.chmod(newfile, 0o644 )
         shutil.move( newfile, filename )
@@ -492,6 +503,10 @@ def process_multiple_files_AVI(
             stderr = subprocess.PIPE )
         logging.error( stdout_val.decode( 'utf8' ) )
         #
+        stdout_val = subprocess.check_output([
+            _nice_exec, '-n', '19', _mkvpropedit_exec,
+            newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
+        #
         os.chmod(newfile, 0o644 )
         os.rename( newfile, replacfile )
         os.remove( filename )
@@ -507,5 +522,3 @@ def process_multiple_files_AVI(
     list_processed.append( 'took %0.3f seconds to process %d files' % (
         dt00, len( act_file_names ) ) )
     json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
-    
-    
