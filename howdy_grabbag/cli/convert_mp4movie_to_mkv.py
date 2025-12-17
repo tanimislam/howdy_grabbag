@@ -13,7 +13,7 @@ from howdy import signal_handler
 signal.signal( signal.SIGINT, signal_handler )
 #
 import mutagen.mp4, time, os, sys, titlecase
-import uuid, logging, subprocess
+import uuid, logging, subprocess, shlex
 from howdy.core import core_rsync, SSHUploadPaths
 from howdy_grabbag.utils import find_ffmpeg_exec
 from shutil import which
@@ -78,14 +78,14 @@ def rsync_upload_mkv( mycmd, mxcmd, numtries = 10 ):
     logging.info( mystr_split[-1] )
     logging.info( 'TRYING UP TO %d TIMES.' % numtries )
     time0 = time.perf_counter( )
-    for idx in range( num_tries ):
+    for idx in range( numtries ):
         time00 = time.perf_counter( )
         stdout_val = subprocess.check_output(
             shlex.split( mycmd ), stderr = subprocess.STDOUT )
         if not any(map(lambda line: 'dispatch_run_fatal' in line, stdout_val.decode('utf-8').split('\n'))):
             mystr_split.append(
                 'SUCCESSFUL ATTEMPT %d / %d IN %0.3f SECONDS.' % (
-                    idx + 1, numtries, time.time( ) - time00 ) )
+                    idx + 1, numtries, time.perf_counter( ) - time00 ) )
             logging.debug( '%s\n' % stdout_val.decode( 'utf-8' ) )
             logging.info( mystr_split[-1] )
             return 'SUCCESS', '\n'.join( mystr_split )
