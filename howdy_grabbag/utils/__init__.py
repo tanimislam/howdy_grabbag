@@ -1,6 +1,80 @@
-import os, sys, time, subprocess, glob, json, titlecase, re
+import os, sys, time, subprocess, glob, json, titlecase, re, logging, shlex
+from howdy.core import core_rsync, SSHUploadPaths
 from itertools import chain
 from shutil import which
+
+def find_valid_movie_aliases( ):
+    data_remote_collections = core_rsync.get_remote_connections( )
+    valid_movie_aliases = sorted(
+        set( filter(lambda alias: data_remote_collections[ alias ][ 'media type' ] == 'movie',
+                    data_remote_collections ) ) )
+    return valid_movie_aliases
+
+def get_rsync_commands(
+    alias, outputfile, subdir = None ):
+    #
+    valid_aliases = find_valid_movie_aliases( )
+    if alias not in valid_aliases:
+        print( "ERROR, chosen alias = %s for remote movie media directory collection not one of %s." % (
+            alias, valid_aliases ) )
+        return None
+    remote_collection = core_rsync.get_remote_connections( show_password = True )[ alias ]
+    sshpath = remote_collection[ 'ssh path' ]
+    maindir = remote_collection[ 'main directory' ]
+    if len( remote_collection[ 'sub directories' ] ) == 0:
+        finaldir = maindir
+    else:
+        if subdir is None:
+            print( "ERROR, sub directory key must be one of %s." % sorted( remote_collection[ 'sub directories' ] ) )
+            return None
+        if subdir not in remote_collection[ 'sub directories' ]:
+            print( "ERROR, sub directory key = %s must be one of %s." % (
+                subdir,
+                sorted( remote_collection[ 'sub directories' ] ) ) )
+            return None
+        finaldir = os.path.join( maindir, remote_collection[ 'sub directories' ][ subdir ] )
+    #
+    logging.info( 'MOVIE FILE TO UPLOAD: %s.' % outputfile )
+    logging.info( 'REMOTE MOVIE MEDIA DIRECTORY COLLECTION SSH PATH: %s.' % sshpath )
+    logging.info( 'REMOTE MOVIE MEDIA DIRECTORY COLLECTION UPLOAD DIRECTORY: %s.' % finaldir )
+    #
+    ## now the command to upload via rsync
+    data_rsync = {
+        'password'  : remote_collection[ 'password' ],
+        'sshpath'   : sshpath,
+        'subdir'    : finaldir,
+        'local_dir' : '' }
+    mycmd, mxcmd = core_rsync.get_rsync_command(
+        data_rsync, outputfile, do_download = False,
+        use_local_dir_for_upload = False )
+    return mycmd, mxcmd
+
+
+def rsync_upload_mkv( mycmd, mxcmd, numtries = 10 ):
+    assert( numtries > 0 )
+    mystr_split = [ 'STARTING THIS RSYNC CMD: %s' % mxcmd ]
+    logging.info( mystr_split[-1] )
+    logging.info( 'TRYING UP TO %d TIMES.' % numtries )
+    time0 = time.perf_counter( )
+    for idx in range( numtries ):
+        time00 = time.perf_counter( )
+        stdout_val = subprocess.check_output(
+            shlex.split( mycmd ), stderr = subprocess.STDOUT )
+        if not any(map(lambda line: 'dispatch_run_fatal' in line, stdout_val.decode('utf-8').split('\n'))):
+            mystr_split.append(
+                'SUCCESSFUL ATTEMPT %d / %d IN %0.3f SECONDS.' % (
+                    idx + 1, numtries, time.perf_counter( ) - time00 ) )
+            logging.debug( '%s\n' % stdout_val.decode( 'utf-8' ) )
+            logging.info( mystr_split[-1] )
+            return 'SUCCESS', '\n'.join( mystr_split )
+        mystr_split.append('FAILED ATTEMPT %d / %d IN %0.3f SECONDS.' % (
+            idx + 1, numtries, time.perf_counter( ) - time00 ) )
+        logging.info( mystr_split[-1] )
+        logging.debug( '%s\n' % stdout_val.decode( 'utf-8' ) )
+    mystr_split.append( 'ATTEMPTED AND FAILED %d TIMES IN %0.3f SECONDS.' % (
+        numtries, time.perf_counter( ) - time0 ) )
+    logging.info( mystr_split[-1] )
+    return 'FAILURE', '\n'.join( mystr_split )
 
 def find_ffmpeg_exec( ):
     ffmpeg_exec = which( 'ffmpeg' )

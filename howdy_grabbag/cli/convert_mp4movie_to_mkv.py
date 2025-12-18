@@ -13,9 +13,9 @@ from howdy import signal_handler
 signal.signal( signal.SIGINT, signal_handler )
 #
 import mutagen.mp4, time, os, sys, titlecase
-import uuid, logging, subprocess, shlex
+import uuid, logging, subprocess
 from howdy.core import core_rsync, SSHUploadPaths
-from howdy_grabbag.utils import find_ffmpeg_exec
+from howdy_grabbag.utils import find_ffmpeg_exec, get_rsync_commands, rsync_upload_mkv
 from shutil import which
 from argparse import ArgumentParser
 
@@ -25,79 +25,6 @@ mkvpropedit_exec = which( 'mkvpropedit' )
 hcli_exec = which( 'HandBrakeCLI' )
 assert( all(map(lambda exec_f: exec_f is not None,
                 ( ffmpeg_exec, mkvmerge_exec, mkvpropedit_exec, hcli_exec ) ) ) )
-
-def find_valid_movie_aliases( ):
-    data_remote_collections = core_rsync.get_remote_connections( )
-    valid_movie_aliases = sorted(
-        set( filter(lambda alias: data_remote_collections[ alias ][ 'media type' ] == 'movie',
-                    data_remote_collections ) ) )
-    return valid_movie_aliases
-
-def get_rsync_commands(
-    alias, outputfile, subdir = None ):
-    #
-    valid_aliases = find_valid_movie_aliases( )
-    if alias not in valid_aliases:
-        print( "ERROR, chosen alias = %s for remote movie media directory collection not one of %s." % (
-            alias, valid_aliases ) )
-        return None
-    remote_collection = core_rsync.get_remote_connections( show_password = True )[ alias ]
-    sshpath = remote_collection[ 'ssh path' ]
-    maindir = remote_collection[ 'main directory' ]
-    if len( remote_collection[ 'sub directories' ] ) == 0:
-        finaldir = maindir
-    else:
-        if subdir is None:
-            print( "ERROR, sub directory key must be one of %s." % sorted( remote_collection[ 'sub directories' ] ) )
-            return None
-        if subdir not in remote_collection[ 'sub directories' ]:
-            print( "ERROR, sub directory key = %s must be one of %s." % (
-                subdir,
-                sorted( remote_collection[ 'sub directories' ] ) ) )
-            return None
-        finaldir = os.path.join( maindir, remote_collection[ 'sub directories' ][ subdir ] )
-    #
-    logging.info( 'MOVIE FILE TO UPLOAD: %s.' % outputfile )
-    logging.info( 'REMOTE MOVIE MEDIA DIRECTORY COLLECTION SSH PATH: %s.' % sshpath )
-    logging.info( 'REMOTE MOVIE MEDIA DIRECTORY COLLECTION UPLOAD DIRECTORY: %s.' % finaldir )
-    #
-    ## now the command to upload via rsync
-    data_rsync = {
-        'password'  : remote_collection[ 'password' ],
-        'sshpath'   : sshpath,
-        'subdir'    : finaldir,
-        'local_dir' : '' }
-    mycmd, mxcmd = core_rsync.get_rsync_command(
-        data_rsync, outputfile, do_download = False,
-        use_local_dir_for_upload = False )
-    return mycmd, mxcmd
-
-def rsync_upload_mkv( mycmd, mxcmd, numtries = 10 ):
-    assert( numtries > 0 )
-    mystr_split = [ 'STARTING THIS RSYNC CMD: %s' % mxcmd ]
-    logging.info( mystr_split[-1] )
-    logging.info( 'TRYING UP TO %d TIMES.' % numtries )
-    time0 = time.perf_counter( )
-    for idx in range( numtries ):
-        time00 = time.perf_counter( )
-        stdout_val = subprocess.check_output(
-            shlex.split( mycmd ), stderr = subprocess.STDOUT )
-        if not any(map(lambda line: 'dispatch_run_fatal' in line, stdout_val.decode('utf-8').split('\n'))):
-            mystr_split.append(
-                'SUCCESSFUL ATTEMPT %d / %d IN %0.3f SECONDS.' % (
-                    idx + 1, numtries, time.perf_counter( ) - time00 ) )
-            logging.debug( '%s\n' % stdout_val.decode( 'utf-8' ) )
-            logging.info( mystr_split[-1] )
-            return 'SUCCESS', '\n'.join( mystr_split )
-        mystr_split.append('FAILED ATTEMPT %d / %d IN %0.3f SECONDS.' % (
-            idx + 1, numtries, time.perf_counter( ) - time00 ) )
-        logging.info( mystr_split[-1] )
-        logging.debug( '%s\n' % stdout_val.decode( 'utf-8' ) )
-    mystr_split.append( 'ATTEMPTED AND FAILED %d TIMES IN %0.3f SECONDS.' % (
-        numtries, time.perf_counter( ) - time0 ) )
-    logging.info( mystr_split[-1] )
-    return 'FAILURE', '\n'.join( mystr_split )
-    
 
 def convert_mp4_movie(
         mp4movie, name, year, quality = 28,
@@ -254,6 +181,10 @@ def main( ):
     #
     args = parser.parse_args( )
     #
+    ##
+    logger = logging.getLogger( )
+    if args.do_info: logger.setLevel( logging.INFO )
+    #
     ## error checking
     assert( os.path.isdir( args.outdir ) )
     assert( os.path.isfile( args.mp4 ) )
@@ -261,32 +192,55 @@ def main( ):
     if args.srt is not None:
         assert( os.path.isfile( args.srt ) )
         assert( os.path.basename( args.srt ).lower( ).endswith('.srt' ) )
-    #
-    ##
-    logger = logging.getLogger( )
-    if args.do_info: logger.setLevel( logging.INFO )
-    
-    
+    joblib_dict = {
+        'outdir'       : args.outdir,
+        'mp4'          : args.mp4,
+        'name'         : args.name,
+        'srt'          : args.srt,
+        'year'         : args.year,
+        'lang'         : args.lang,
+        'do_delete'    : args.do_delete,
+        'do_transform' : False,
+        'do_ssh'       : False }
     if args.choose_option == 'transform':
-        outputfile = convert_mp4_movie(
-            args.mp4, args.name, args.year,
-            delete_files = args.do_delete,
-            srtfile = args.srt, quality = args.quality,
-            outdir = args.outdir )
-        return
-
-    outputfile = create_mkv_file(
-        args.mp4, args.name, args.year,
-        delete_files = args.do_delete,
-        srtfile = args.srt,
-        outdir = args.outdir,
-        language = args.lang )
+        joblib_dict[ 'do_transform' ] = True
+        joblib_dict[ 'quality'      ] = args.quality
     #
     ## upload via ssh to the remote server
     if args.choose_option == 'ssh':
-        data = get_rsync_commands(
-            args.ssh_alias, outputfile, subdir = args.ssh_subdir )
-        if data is None:
+        joblib_dict[ 'do_ssh' ] = True
+        joblib_dict[ 'alias'  ] = args.ssh_alias
+        joblib_dict[ 'subdir' ] = args.ssh_subdir
+        data_init = get_rsync_commands(
+            joblib_dict[ 'alias' ], "", subdir = joblib_dict[ 'subdir' ] )
+        if data_init is None:
             return
-        mycmd, mxcmd = data
+    
+    
+    if joblib_dict[ 'do_transform' ]:
+        outputfile = convert_mp4_movie(
+            joblib_dict[ 'mp4' ],
+            joblib_dict[ 'name' ],
+            joblib_dict[ 'year' ],
+            delete_files = joblib_dict[ 'do_delete' ],
+            srtfile = joblib_dict[ 'srt' ],
+            quality = joblib_dict[ 'quality' ],
+            outdir  = joblib_dict[ 'outdir' ] )
+        return
+
+    outputfile = create_mkv_file(
+        joblib_dict[ 'mp4' ],
+        joblib_dict[ 'name' ],
+        joblib_dict[ 'year' ],
+        delete_files = joblib_dict[ 'do_delete' ],
+        srtfile  = joblib_dict[ 'srt' ],
+        outdir   = joblib_dict[ 'outdir' ],
+        language = joblib_dict[ 'lang' ] )
+    
+    ## upload via ssh to the remote server
+    if joblib_dict[ 'do_ssh' ]:
+        mycmd, mxcmd = get_rsync_commands(
+            joblib_dict[ 'alias' ],
+            outputfile,
+            subdir = joblib_dict[ 'subdir' ] )
         rsync_upload_mkv( mycmd, mxcmd, numtries = 10 )
