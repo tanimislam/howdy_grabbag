@@ -10,7 +10,8 @@ Requires executables: ffmpeg, mkvmerge, HandBrakeCLI
 """
 
 import time, os, sys, titlecase, logging, subprocess
-from howdy_grabbag.utils import find_ffmpeg_exec
+from howdy.core import SSHUploadPaths
+from howdy_grabbag.utils import find_ffmpeg_exec, get_rsync_commands_lowlevel, rsync_upload_mkv
 from howdy.tv import tv_attic
 from argparse import ArgumentParser
 
@@ -37,7 +38,9 @@ def rename_mkv_file(
             '%s - s%02de%02d - %s.%s' % ( tvshow, seasno, epno, epname, actual_suffix ) ) )
     os.rename( mkvtv, newfile )
     os.chmod( newfile, 0o644 )
-    logging.info( 'created %s in %0.3f seconds.' % ( newfile, time.perf_counter( ) - time0 ) )
+    logging.info( 'created %s in %0.3f seconds.' % (
+        os.path.realpath( newfile ), time.perf_counter( ) - time0 ) )
+    return os.path.realpath( newfile )
 
 def main( ):
     parser = ArgumentParser( )
@@ -56,6 +59,18 @@ def main( ):
     parser.add_argument(
         '--noinfo', dest='do_info', action='store_false', default = True,
         help = 'If chosen, then run with NO INFO logging (less debugging).' )
+    #
+    subparser = parser.add_subparsers(
+        help = 'Option of transforming (using HandBrakeCLI) to smaller size MKV file.',
+        dest = 'choose_option' )
+    #
+    ## SSH file to remote directory
+    parser_ssh = subparser.add_parser(
+        'ssh', help = 'Use the collection of remote media directory collections to upload final MKV movie to remote SSH server.' )
+    parser_ssh.add_argument( '-A', '--alias', dest = 'ssh_alias', type = str, action = 'store', required = True,
+                             help = 'The alias to identify the remote tv media directory collection, which contains movies.' )
+    parser_ssh.add_argument( '-T', '--tvshow', dest = 'tvshow', type = str, action = 'store', default = None,
+                             help = 'Optional name of the TV show directory into which to put the TV media file.' )
     #
     args = parser.parse_args( )
     #
@@ -87,9 +102,47 @@ def main( ):
         epno = int( splitseaseps[1] )
     except:
         print( 'Error, invalid episode number.' )
-        return        
+        return
+    joblib_dict = {
+        'mkvtv'  : args.inputmkv,
+        'tvshow' : args.seriesName,
+        'seasno' : seasno,
+        'epno'   : epno,
+        'outdir' : args.outdir,
+        'do_ssh' : False }
+    if args.choose_option == 'ssh':
+        joblib_dict[ 'do_ssh' ] = True
+        joblib_dict[ 'alias'  ] = args.ssh_alias
+        tvshow = joblib_dict[ 'tvshow' ]
+        if args.tvshow is not None: tvshow = args.tvshow
+        #
+        ## try this out first, check find alias
+        data_init = get_rsync_commands_lowlevel(
+            joblib_dict[ 'alias' ], tvshow, "", mediatype = SSHUploadPaths.MediaType.tv )
+        print( data_init )
+        if data_init is None:
+            return
+        valid_subdirs = sorted(filter(lambda subdir: get_rsync_commands_lowlevel(
+            joblib_dict[ 'alias' ], subdir, "", mediatype = SSHUploadPaths.MediaType.tv ) is not None,
+                                    set([ os.path.join( tvshow, 'Season %d' % seasno ),
+                                          os.path.join( tvshow, 'Season %02d' % seasno ) ] ) ) )
+        if len( valid_subdirs ) == 0:
+            return
+        joblib_dict[ 'subdir' ] = valid_subdirs[ 0 ]
     #
-    rename_mkv_file(
-        args.inputmkv, args.seriesName, seasno, epno,
-        outdir = args.outdir )
-
+    #outputfile = rename_mkv_file(
+    #    args.inputmkv, args.seriesName, seasno, epno,
+    #    outdir = args.outdir )
+    outputfile = rename_mkv_file(
+        joblib_dict[ 'mkvtv'  ],
+        joblib_dict[ 'tvshow' ],
+        joblib_dict[ 'seasno' ],
+        joblib_dict[ 'epno'   ],
+        outdir = joblib_dict[ 'outdir' ] )
+    if joblib_dict[ 'do_ssh' ]:
+        mycmd, mxcmd = get_rsync_commands_lowlevel(
+            joblib_dict[ 'alias' ],
+            joblib_dict[ 'subdir' ],
+            outputfile,
+            mediatype = SSHUploadPaths.MediaType.tv )
+        rsync_upload_mkv( mycmd, mxcmd, numtries = 10 )

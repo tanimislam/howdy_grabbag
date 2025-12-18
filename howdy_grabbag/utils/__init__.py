@@ -3,20 +3,53 @@ from howdy.core import core_rsync, SSHUploadPaths
 from itertools import chain
 from shutil import which
 
-def find_valid_movie_aliases( ):
+def find_valid_aliases( mediatype = SSHUploadPaths.MediaType.movie ):
     data_remote_collections = core_rsync.get_remote_connections( )
-    valid_movie_aliases = sorted(
-        set( filter(lambda alias: data_remote_collections[ alias ][ 'media type' ] == 'movie',
+    valid_aliases = sorted(
+        set( filter(lambda alias: data_remote_collections[ alias ][ 'media type' ] == mediatype.name,
                     data_remote_collections ) ) )
-    return valid_movie_aliases
+    return valid_aliases
+
+def get_rsync_commands_lowlevel(
+    alias, subdir, outputfile, mediatype = SSHUploadPaths.MediaType.movie ):
+    #
+    valid_aliases = find_valid_aliases( mediatype = mediatype )
+    if alias not in valid_aliases:
+        print( "ERROR, chosen alias = %s for remote %s media directory collection not one of %s." % (
+            alias, mediatype.name, valid_aliases ) )
+        return None
+    remote_collection = core_rsync.get_remote_connections( show_password = True )[ alias ]
+    sshpath = remote_collection[ 'ssh path' ]
+    maindir = remote_collection[ 'main directory' ]
+    finaldir = os.path.join( maindir, subdir )
+    #
+    logging.info( 'MOVIE FILE TO UPLOAD: %s.' % outputfile )
+    logging.info( 'REMOTE %s MEDIA DIRECTORY COLLECTION SSH PATH: %s.' % ( mediatype.name.upper( ), sshpath ) )
+    logging.info( 'REMOTE %s MEDIA DIRECTORY COLLECTION UPLOAD DIRECTORY: %s.' % ( mediatype.name.upper( ), finaldir ) )
+    status = core_rsync.check_remote_connection_paths(
+        sshpath, remote_collection[ 'password' ], finaldir )
+    if status != 'SUCCESS':
+        logging.debug( "ERROR MESSAGE: %s." % status )
+        return None
+    #
+    ## now the command to upload via rsync
+    data_rsync = {
+        'password'  : remote_collection[ 'password' ],
+        'sshpath'   : sshpath,
+        'subdir'    : finaldir,
+        'local_dir' : '' }
+    mycmd, mxcmd = core_rsync.get_rsync_command(
+        data_rsync, outputfile, do_download = False,
+        use_local_dir_for_upload = False )
+    return mycmd, mxcmd
 
 def get_rsync_commands(
-    alias, outputfile, subdir = None ):
+    alias, outputfile, subdir = None, mediatype = SSHUploadPaths.MediaType.movie ):
     #
-    valid_aliases = find_valid_movie_aliases( )
+    valid_aliases = find_valid_aliases( mediatype = mediatype )
     if alias not in valid_aliases:
-        print( "ERROR, chosen alias = %s for remote movie media directory collection not one of %s." % (
-            alias, valid_aliases ) )
+        print( "ERROR, chosen alias = %s for remote %s media directory collection not one of %s." % (
+            alias, mediatype.name, valid_aliases ) )
         return None
     remote_collection = core_rsync.get_remote_connections( show_password = True )[ alias ]
     sshpath = remote_collection[ 'ssh path' ]
@@ -35,8 +68,8 @@ def get_rsync_commands(
         finaldir = os.path.join( maindir, remote_collection[ 'sub directories' ][ subdir ] )
     #
     logging.info( 'MOVIE FILE TO UPLOAD: %s.' % outputfile )
-    logging.info( 'REMOTE MOVIE MEDIA DIRECTORY COLLECTION SSH PATH: %s.' % sshpath )
-    logging.info( 'REMOTE MOVIE MEDIA DIRECTORY COLLECTION UPLOAD DIRECTORY: %s.' % finaldir )
+    logging.info( 'REMOTE %s MEDIA DIRECTORY COLLECTION SSH PATH: %s.' % ( mediatype.name.upper( ), sshpath ) )
+    logging.info( 'REMOTE %s MEDIA DIRECTORY COLLECTION UPLOAD DIRECTORY: %s.' % ( mediatype.name.upper( ), finaldir ) )
     #
     ## now the command to upload via rsync
     data_rsync = {
