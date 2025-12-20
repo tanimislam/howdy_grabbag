@@ -154,7 +154,8 @@ def process_mp4_srt_eps_to_mkv(
     assert( mkvmerge_exec is not None )
     mp4files = sorted(glob.glob( os.path.join( dirname, '*.mp4' ) ) )
     srtfiles = sorted(glob.glob( os.path.join( dirname, srtglob ) ) )
-    assert( len(mp4files) == len(srtfiles))
+    assert( len(mp4files) == len(srtfiles)), "ERROR, %d MP4 FILES != %d SRT FILES." % (
+      len( mp4files ), len( srtfiles ) )
     #epdicts_max = set(map(lambda idx: idx + starteps, range(len(mp4files))))
     #assert( len( epdicts_max - set( epdicts[ seasno ] ) ) == 0 )
     assert( all(map(os.path.exists, ( ffmpeg_exec, mkvmerge_exec ) ) ) )
