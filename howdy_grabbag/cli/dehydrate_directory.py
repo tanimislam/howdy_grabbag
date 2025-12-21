@@ -105,20 +105,22 @@ def main_list( ):
             do_hevc = args.do_hevc, min_bitrate = args.minbitrate )
         data = list( zip(
             map(os.path.basename, sorted( fnames_dict ) ),
-            map(lambda fname: '%0.1f' % fnames_dict[ fname ][ 'bit_rate_kbps' ], sorted( fnames_dict ) ) ) )
+            map(lambda fname: '%0.1f' % fnames_dict[ fname ][ 'bit_rate_kbps' ], sorted( fnames_dict ) ),
+            map(lambda fname: '%0.1f' % fnames_dict[ fname ][ 'audio_bit_rate_kbps' ], sorted( fnames_dict ) ) ) )
         print( 'found %02d valid files in %s with min bitrate >= %d kbps.\n' % (
             len( fnames_dict ), directory_names, args.minbitrate ) )
-        print( '%s\n' % tabulate( data, headers = [ 'FILENAME', 'KBPS' ] ) )
+        print( '%s\n' % tabulate( data, headers = [ 'FILENAME', 'KBPS', 'AUDIO KBPS' ] ) )
         return
     #
     fnames_dict_AVI = find_files_to_process_AVI(
         directory_names = directory_names )
     data_AVI = list( zip(
         map(os.path.basename, sorted( fnames_dict_AVI ) ),
-        map(lambda fname: '%0.1f' % fnames_dict_AVI[ fname ][ 'bit_rate_kbps' ], sorted( fnames_dict_AVI ) ) ) )
+        map(lambda fname: '%0.1f' % fnames_dict_AVI[ fname ][ 'bit_rate_kbps' ], sorted( fnames_dict_AVI ) ),
+        map(lambda fname: '%0.1f' % fnames_dict_AVI[ fname ][ 'audio_bit_rate_kbps' ], sorted( fnames_dict_AVI ) ) ) )
     print( 'found %02d valid files in %s with min bitrate >= %d kbps.\n' % (
         len( fnames_dict_AVI ), directory_names, args.minbitrate ) )
-    print( '%s\n' % tabulate( data_AVI, headers = [ 'FILENAME', 'KBPS' ] ) )
+    print( '%s\n' % tabulate( data_AVI, headers = [ 'FILENAME', 'KBPS', 'AUDIO KBPS' ] ) )
     print( 'took %0.3f seconds to process.' % ( time.perf_counter( ) - time0 ) )
 
 def main_subtitles( ):

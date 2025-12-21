@@ -45,14 +45,35 @@ def _get_hevc_bitrate( filename ):
         info = {
             'is_hevc' :  data['streams'][0]['codec_name'].lower( ) == 'hevc',
             'bit_rate_kbps' : float( data['format']['bit_rate' ] ) / 1_024, }
+        audio_streams = list(filter(lambda entry: entry['codec_type'] == 'audio', data['streams'] ) )
+        try:
+            bit_rate_audio_1 = sum(map(lambda entry: float( entry[ 'bit_rate' ] ) / 1_024, audio_streams ) )
+        except Exception as e:
+            bit_rate_audio_1 = 0
+        try:
+            bit_rate_audio_2 = sum(map(lambda entry: float( entry[ 'tags']['BPS'] ) / 1_024, audio_streams ) )
+        except Exception as e:
+            bit_rate_audio_2 = 0
+        info[ 'audio_bit_rate_kbps' ] = max( bit_rate_audio_1, bit_rate_audio_2 )
         return info
-    except: return None
+    except Exception as e:
+        logging.debug( 'PROBLEM WITH %s. ERROR MESSAGE = %s.' % (
+            os.path.realpath( filename ), str( e ) ) )
+        return None
 
 def _get_bitrate_AVI( filename ):
     try:
         data = _get_ffprobe_json( filename )
         info = { 
             'bit_rate_kbps' : float( data['format']['bit_rate' ] ) / 1_024, }
+        audio_streams = list(filter(lambda entry: entry['codec_type'] == 'audio', data['streams'] ) )
+        try:
+            bit_rate_audio_1 = sum(map(lambda entry: float( entry[ 'bit_rate' ] ) / 1_024, audio_streams ) )
+        except: bit_rate_audio_1 = 0
+        try:
+            bit_rate_audio_2 = sum(map(lambda entry: float( entry[ 'tags']['BPS'] ) / 1_024, audio_streams ) )
+        except: bit_rate_audio_2 = 0
+        info[ 'audio_bit_rate_kbps' ] = max( bit_rate_audio_1, bit_rate_audio_2 )
         return info
     except: return None
 
@@ -76,6 +97,40 @@ class DATAFORMAT( Enum ):
             return DATAFORMAT.IS_AVI_OR_MPEG
         return DATAFORMAT.IS_LATER
 
+#
+## process_single_filename_hcli
+def process_single_filename_hcli( filename, newfile, qual = 28, audio_bit_string = '160' ):
+    def _get_audio_entry_hcli( bit_string ):
+        if bit_string.strip( ).isdigit( ):
+            num_kbps = int( bit_string )
+            assert( num_kbps > 0 )
+            return [ '-B', '%d' % num_kbps ]
+        if bit_string.strip( ).lower( ) == 'copy':
+            return [ '-E', 'copy' ]
+        return None
+    #
+    ##
+    audio_entry_hcli = _get_audio_entry_hcli( audio_bit_string )
+    if audio_entry_hcli is None:
+        raise ValueError("Error, invalid audio bit string = %s." % audio_bit_string )
+    logging.debug( 'FILENAME = %s, NEWFILE = %s, AUDIO ENTRY HCLI = %s.' % (
+        filename, newfile, audio_entry_hcli ) )
+    stdout_val = subprocess.check_output([
+        _nice_exec, '-n', '19', _hcli_exec,
+        '-i', filename, '-e', 'x265', '-q', '%d' % qual,
+        audio_entry_hcli[0], audio_entry_hcli[1],
+        '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
+        '-s', ','.join(map(lambda num: '%d' % num, range(1,35))),
+        '-o', newfile ], stderr = subprocess.PIPE )
+    logging.error( stdout_val.decode( 'utf8' ) )
+    if newfile.endswith( '.mkv' ):
+        stdout_val = subprocess.check_output([
+            _nice_exec, '-n', '19', _mkvpropedit_exec,
+            newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
+        logging.error( stdout_val.decode( 'utf8' ) )
+            
+        
+        
 def get_all_durations_dataframe( tvdata, min_bitrate = 2000, mode_dataformat = DATAFORMAT.IS_LATER ):
     if mode_dataformat == DATAFORMAT.IS_LATER: assert( min_bitrate >= 1000 )
     sizes = [ ]
@@ -178,7 +233,7 @@ def summarize_single_show( df_sub, showname, minbitrate, mode_dataformat = DATAF
     data.append( [ 'MAX KBPS HEVC', df_show_ishevc[ 'bitrate (kbps)' ].max( ) ] )
     print( '%s\n' % tabulate( data, headers = [ 'PARAMETER', 'INFO' ] ) )
 
-def process_single_show( df_sub, showname, do_hevc = True, qual = 28 ):
+def process_single_show( df_sub, showname, do_hevc = True, qual = 28, audio_bit_string = '160' ):
     #
     df_show = single_show_summary_dataframe( df_sub, showname )
     df_show_sub = df_show.copy( )
@@ -193,17 +248,11 @@ def process_single_show( df_sub, showname, do_hevc = True, qual = 28 ):
     for idx, filename in enumerate(episodes_sorted):
         time0 = time.perf_counter( )
         newfile = os.path.basename( filename )
-        stdout_val = subprocess.check_output([
-            _nice_exec, '-n', '19', _hcli_exec,
-            '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-B', '160',
-            '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
-            '-s', ','.join(map(lambda num: '%d' % num, range(1,35))),
-            '-o', newfile ], stderr = subprocess.PIPE )
         #
-        if newfile.endswith( '.mkv' ):
-            stdout_val = subprocess.check_output([
-                _nice_exec, '-n', '19', _mkvpropedit_exec,
-                newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
+        process_single_filename_hcli(
+            filename, newfile, qual = qual,
+            audio_bit_string = audio_bit_string )
+        #
         os.chmod(newfile, 0o644 )   
         shutil.move( newfile, filename )
         dt0 = time.perf_counter( ) - time0
@@ -219,7 +268,7 @@ def process_single_show( df_sub, showname, do_hevc = True, qual = 28 ):
         dt00, len( episodes_sorted ) ) )
     json.dump( list_processed, open( 'processed_stuff.json', 'w' ), indent = 1 )
 
-def process_single_show_avi( df_sub, showname, qual = 20 ):
+def process_single_show_avi( df_sub, showname, qual = 20, audio_bit_string = '160' ):
     #
     df_show_sub = single_show_summary_dataframe(
         df_sub, showname, mode_dataformat = DATAFORMAT.IS_AVI_OR_MPEG )
@@ -236,17 +285,9 @@ def process_single_show_avi( df_sub, showname, qual = 20 ):
         dirname = os.path.dirname( filename )
         newfile = re.sub( r'\.avi$', '.mkv', os.path.basename( filename ) )
         try:
-            stdout_val = subprocess.check_output([
-                _nice_exec, '-n', '19', _hcli_exec,
-                '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-B', '160',
-                '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
-                '-o', newfile ],
-                stderr = subprocess.PIPE )
-            #
-            stdout_val = subprocess.check_output([
-                _nice_exec, '-n', '19', _mkvpropedit_exec,
-                newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
-            #
+            process_single_filename_hcli(
+                filename, newfile, qual = qual,
+                audio_bit_string = audio_bit_string )
             os.chmod(newfile, 0o644 )
             shutil.move( newfile, dirname )
             os.remove( filename )
@@ -352,7 +393,7 @@ def process_multiple_directories_subtitles(
 
 def process_multiple_directories(
     directory_names = [ os.getcwd( ), ], do_hevc = True, min_bitrate = 2_000,
-    qual = 28, output_json_file = 'processed_stuff.json' ):
+        qual = 28, output_json_file = 'processed_stuff.json', audio_bit_string = '160' ):
     assert( os.path.basename( output_json_file ).endswith( '.json' ) )
     fnames_dict = find_files_to_process(
         directory_names = directory_names, do_hevc = do_hevc,
@@ -364,18 +405,10 @@ def process_multiple_directories(
     for idx, filename in enumerate(sorted( fnames_dict ) ):
         time0 = time.perf_counter( )
         newfile = '%s-%s' % ( str( uuid.uuid4( ) ).split('-')[0].strip( ), os.path.basename( filename ).replace(":", "-" ) )
-        stdout_val = subprocess.check_output([
-            _nice_exec, '-n', '19', _hcli_exec,
-            '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-E', 'av_aac', '-B', '160',
-            '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
-            '-s', ','.join(map(lambda num: '%d' % num, range(1,35))),
-            '-o', newfile ],
-            stderr = subprocess.PIPE )
         #
-        if newfile.endswith( '.mkv' ):
-            stdout_val = subprocess.check_output([
-                _nice_exec, '-n', '19', _mkvpropedit_exec,
-                newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
+        process_single_filename_hcli(
+            filename, newfile, qual = qual,
+            audio_bit_string = audio_bit_string )
         #
         os.chmod(newfile, 0o644 )
         shutil.move( newfile, filename )
@@ -395,7 +428,9 @@ def process_multiple_directories(
 def process_multiple_directories_AVI(
     directory_names = [ os.getcwd( ), ],
     qual = 22,
-    output_json_file = 'processed_stuff.json' ):
+    output_json_file = 'processed_stuff.json',
+    audio_bit_string = '160',
+):
     assert( os.path.basename( output_json_file ).endswith( '.json' ) )
     fnames_dict = find_files_to_process_AVI(
         directory_names = directory_names )
@@ -411,17 +446,9 @@ def process_multiple_directories_AVI(
         newfile = '.'.join(
             os.path.basename( filename ).replace(":", "-").split('.')[:-1] + [ 'mkv', ] )
         newfile = '%s-%s' % ( str( uuid.uuid4( ) ).split('-')[0].strip( ), newfile )
-        stdout_val = subprocess.check_output([
-            _nice_exec, '-n', '19', _hcli_exec,
-            '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-E', 'av_aac', '-B', '160',
-            '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
-            '-o', newfile ],
-            stderr = subprocess.PIPE )
-        logging.error( stdout_val.decode( 'utf8' ) )
         #
-        stdout_val = subprocess.check_output([
-            _nice_exec, '-n', '19', _mkvpropedit_exec,
-            newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
+        process_single_filename_hcli(
+            filename, newfile, qual = qual, audio_bit_string = audio_bit_string )
         #
         os.chmod(newfile, 0o644 )
         os.rename( newfile, replacfile )
@@ -440,7 +467,9 @@ def process_multiple_directories_AVI(
     json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
 
 def process_multiple_files(
-    file_names, qual = 28, output_json_file = 'processed_stuff.json' ):
+    file_names, qual = 28, output_json_file = 'processed_stuff.json',
+    audio_bit_string = '160',
+):
     #
     assert( os.path.basename( output_json_file ).endswith( '.json' ) )
     act_file_names = sorted(filter(os.path.isfile,
@@ -451,17 +480,10 @@ def process_multiple_files(
     for idx, filename in enumerate( act_file_names ):
         time0 = time.perf_counter( )
         newfile = '%s-%s' % ( str( uuid.uuid4( ) ).split('-')[0].strip( ), os.path.basename( filename ).replace(":", "-" ) )
-        stdout_val = subprocess.check_output([
-            _nice_exec, '-n', '19', _hcli_exec,
-            '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-E', 'av_aac', '-B', '160',
-            '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
-            '-s', ','.join(map(lambda num: '%d' % num, range(1,35))),
-            '-o', newfile ], stderr = subprocess.PIPE )
         #
-        if newfile.endswith( '.mkv' ):
-            stdout_val = subprocess.check_output([
-                _nice_exec, '-n', '19', _mkvpropedit_exec,
-                newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
+        process_single_filename_hcli(
+            filename, newfile, qual = qual,
+            audio_bit_string = audio_bit_string )
         #
         os.chmod(newfile, 0o644 )
         shutil.move( newfile, filename )
@@ -480,7 +502,7 @@ def process_multiple_files(
 
 
 def process_multiple_files_AVI(
-    file_names, qual = 28, output_json_file = 'processed_stuff.json' ):
+        file_names, qual = 28, output_json_file = 'processed_stuff.json', audio_bit_string = '160' ):
     #
     assert( os.path.basename( output_json_file ).endswith( '.json' ) )
     act_file_names = sorted(filter(os.path.isfile,
@@ -495,17 +517,10 @@ def process_multiple_files_AVI(
         newfile = '.'.join(
             os.path.basename( filename ).replace(":", "-").split('.')[:-1] + [ 'mkv', ] )
         newfile = '%s-%s' % ( str( uuid.uuid4( ) ).split('-')[0].strip( ), newfile )
-        stdout_val = subprocess.check_output([
-            _nice_exec, '-n', '19', _hcli_exec,
-            '-i', filename, '-e', 'x265', '-q', '%d' % qual, '-E', 'av_aac', '-B', '160',
-            '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
-            '-o', newfile ],
-            stderr = subprocess.PIPE )
-        logging.error( stdout_val.decode( 'utf8' ) )
         #
-        stdout_val = subprocess.check_output([
-            _nice_exec, '-n', '19', _mkvpropedit_exec,
-            newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
+        process_single_filename_hcli(
+            filename, newfile, qual = qual,
+            audio_bit_string = audio_bit_string )
         #
         os.chmod(newfile, 0o644 )
         os.rename( newfile, replacfile )
