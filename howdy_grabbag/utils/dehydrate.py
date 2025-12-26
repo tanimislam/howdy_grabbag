@@ -449,7 +449,7 @@ def process_multiple_directories_lower_audio(
     directory_names = [ os.getcwd( ), ], min_audio_bit_rate = 256,
         output_json_file = 'processed_audio_stuff.json', new_audio_bit_rate = 160 ):
     assert( os.path.basename( output_json_file ).endswith( '.json' ) )
-    fnames_dict = dict(filter(lambda entry: entry[1][ 'bit_rate_kbps' ] > min_audio_bit_rate, find_files_to_process(
+    fnames_dict = dict(filter(lambda entry: entry[1][ 'audio_bit_rate_kbps' ] > min_audio_bit_rate, find_files_to_process(
         directory_names = directory_names, do_hevc = True, min_bitrate = 0 ).items( ) ) )
     time00 = time.perf_counter( )
     list_processed = [ 'found %02d files in %s with audio sizes > %d kbps. Will lower audio bit rate to %d kbps.' % (
