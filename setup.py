@@ -28,7 +28,7 @@ setup(
     ## classification: where in package space does "howdy live"?
     ## follow (poorly) advice I infer from https://blog.ionelmc.ro/2014/05/25/python-packaging/#the-setup-script
     classifiers=[
-    # complete classifier list: http://pypi.python.org/pypi?%3Aaction=list_classifiers
+    # complete classifier list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: End Users/Desktop',
         'License :: OSI Approved :: BSD License',
@@ -67,6 +67,7 @@ setup(
             'deavify_tv_shows = howdy_grabbag.cli.dehydrate_tv_shows:main_avis',
             'dehydrate_directory = howdy_grabbag.cli.dehydrate_directory:main',
             'dehydrate_files = howdy_grabbag.cli.dehydrate_directory:main_dehydrate_files',
+            'lower_audio_directory = howdy_grabbag.cli.dehydrate_directory:main_lower_audio',
             'list_directory = howdy_grabbag.cli.dehydrate_directory:main_list',
             'subtitle_directory = howdy_grabbag.cli.dehydrate_directory:main_subtitles',
             'spotify_add_and_fix = howdy_grabbag.cli.spotify_add_and_fix:main',

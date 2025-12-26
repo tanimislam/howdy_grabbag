@@ -12,6 +12,7 @@ from howdy_grabbag.utils.dehydrate import (
     process_multiple_directories,
     process_multiple_directories_AVI,
     process_multiple_directories_subtitles,
+    process_multiple_directories_lower_audio,
     process_multiple_files,
     process_multiple_files_AVI )
     
@@ -45,6 +46,8 @@ def main( ):
     ## dehydrate arguments
     parser.add_argument( '-Q', '--quality', dest = 'parser_dehydrate_quality', metavar = 'QUALITY', type = int, action = 'store',
                                   default = 28, help = 'Will dehydrate shows using HEVC video codec with this quality. Default is 28. Must be >= 20.' )
+    parser.add_argument( '-B', '--bitrate', dest = 'parser_audio_bitstring', metavar = 'BITRATE', type = str, action = 'store', default = '160',
+                         help = 'Will dehydrate shows using this audio bitrate in KBPS, or using value = "copy". Default is 160.' )
     parser.add_argument( '-J', '--jsonfile', dest = 'parser_dehydrate_jsonfile', metavar = 'JSONFILE', type = str, action = 'store', default = 'processed_stuff.json',
                                   help = 'Name of the JSON file to store progress-as-you-go-along on directory dehydration. Default file name = "processed_stuff.json".' )
     #
@@ -62,16 +65,60 @@ def main( ):
     jsonfile = os.path.expanduser( args.parser_dehydrate_jsonfile )
     assert( os.path.basename( jsonfile ).endswith( '.json' ) )
     assert( quality >= 20 )
+    #
+    ##
+    audio_bit_string = args.parser_audio_bitstring.strip( ).lower( )
+    if audio_bit_string != 'copy':
+        assert( audio_bit_string.isdigit( ) )
     if not args.do_avi:
         process_multiple_directories(
             directory_names = directory_names, do_hevc = args.do_hevc,
             min_bitrate = args.minbitrate, qual = quality,
+            audio_bit_string = audio_bit_string,
             output_json_file = jsonfile )
     else:
         process_multiple_directories_AVI(
             directory_names = directory_names,
             qual = quality,
             output_json_file = jsonfile )
+
+def main_lower_audio( ):
+    parser = ArgumentParser( )
+    parser.add_argument( '-d', '--directories', dest='directories', type=str, action = 'store', nargs = '+', default = [ os.getcwd( ), ],
+                        help = 'Name of the directories of MKV and MP4 files to dehydrate. Default is %s.' % [ os.getcwd( ), ] )
+    parser.add_argument( '-M', '--minaudiobitrate', dest = 'minaudiobitrate', type = int, action = 'store', default = 256,
+                        help = ' '.join([
+                            'The minimum audio bitrate (in kbps) of episodes to lower the audio bitrate. Must be >= 10 kbps.',
+                            'Default is 256 kbps.']))
+    parser.add_argument( '--info', dest='do_info', action='store_true', default = False,
+                        help = 'If chosen, then turn on INFO logging.' )
+    #
+    ## lower_audio arguments
+    parser.add_argument( '-B', '--bitrate', dest = 'parser_new_audio_bit_rate', metavar = 'BITRATE', type = int, action = 'store', default = 160,
+                         help = 'Will lower the audio bitrate down to these many kbps. Must be >= 10 kbps. Default is 160 kbps.' )
+    parser.add_argument( '-J', '--jsonfile', dest = 'parser_lower_audio_jsonfile', metavar = 'JSONFILE', type = str, action = 'store',
+                         default = 'processed_stuff_audio.json',
+                         help = 'Name of the JSON file to store progress-as-you-go-along on directory dehydration. Default file name = "processed_stuff_audio.json".' )
+    #
+    ## parsing arguments
+    time0 = time.perf_counter( )
+    args = parser.parse_args( )
+    assert( args.minaudiobitrate >= 10 )
+    logger = logging.getLogger( )
+    if args.do_info: logger.setLevel( logging.INFO )
+    #
+    directory_names = _get_directory_names( args.directories )
+    #
+    ## dehydrate directory
+    jsonfile = os.path.expanduser( args.parser_lower_audio_jsonfile )
+    assert( os.path.basename( jsonfile ).endswith( '.json' ) )
+    assert( args.parser_new_audio_bit_rate >= 10 )
+    #
+    process_multiple_directories_lower_audio(
+        directory_names = directory_names,
+        min_audio_bit_rate = args.minaudiobitrate,
+        new_audio_bit_rate = args.parser_new_audio_bit_rate,
+        output_json_file = jsonfile )
 
 def main_list( ):
     parser = ArgumentParser( )

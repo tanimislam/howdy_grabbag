@@ -122,13 +122,33 @@ def process_single_filename_hcli( filename, newfile, qual = 28, audio_bit_string
         '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
         '-s', ','.join(map(lambda num: '%d' % num, range(1,35))),
         '-o', newfile ], stderr = subprocess.PIPE )
-    logging.error( stdout_val.decode( 'utf8' ) )
+    logging.debug( stdout_val.decode( 'utf8' ) )
     if newfile.endswith( '.mkv' ):
         stdout_val = subprocess.check_output([
             _nice_exec, '-n', '19', _mkvpropedit_exec,
             newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
-        logging.error( stdout_val.decode( 'utf8' ) )
-            
+        logging.debug( stdout_val.decode( 'utf8' ) )
+
+#
+## process single file to lower audio bitrate alone
+def process_single_filename_lower_audio( filename, newfile, audio_bit_rate_new = 160 ):
+    assert( audio_bit_rate_new > 10 )
+    logging.debug( 'FILENAME = %s, NEWFILE = %s, NEW AUDIO BIT RATE = %d.' % (
+        filename, newfile, audio_bit_rate_new ) )
+    stdout_val = subprocess.check_output([
+        _nice_exec, '-n', '19', _ffmpeg_exec,
+        '-i', 'file:%s' % filename,
+        '-vcodec', 'copy',
+        '-scodec', 'copy',
+        '-acodec', 'aac', '-ab', '%dk' % audio_bit_rate_new,
+        'file:%s' % newfile ], stderr = subprocess.PIPE )
+    logging.debug( stdout_val.decode( 'utf8' ) )
+    if newfile.endswith( '.mkv' ):
+        stdout_val = subprocess.check_output([
+            _nice_exec, '-n', '19', _mkvpropedit_exec,
+            newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
+        logging.debug( stdout_val.decode( 'utf8' ) )
+        
         
         
 def get_all_durations_dataframe( tvdata, min_bitrate = 2000, mode_dataformat = DATAFORMAT.IS_LATER ):
@@ -425,6 +445,37 @@ def process_multiple_directories(
         dt00, len( fnames_dict ) ) )
     json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
 
+def process_multiple_directories_lower_audio(
+    directory_names = [ os.getcwd( ), ], min_audio_bit_rate = 256,
+        output_json_file = 'processed_audio_stuff.json', new_audio_bit_rate = 160 ):
+    assert( os.path.basename( output_json_file ).endswith( '.json' ) )
+    fnames_dict = dict(filter(lambda entry: entry[1][ 'bit_rate_kbps' ] > min_audio_bit_rate, find_files_to_process(
+        directory_names = directory_names, do_hevc = True, min_bitrate = 0 ).items( ) ) )
+    time00 = time.perf_counter( )
+    list_processed = [ 'found %02d files in %s with audio sizes > %d kbps. Will lower audio bit rate to %d kbps.' % (
+        len( fnames_dict ), list(map(os.path.abspath, directory_names ) ), min_audio_bit_rate, new_audio_bit_rate ), ]
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+    for idx, filename in enumerate(sorted( fnames_dict ) ):
+        time0 = time.perf_counter( )
+        newfile = '%s-%s' % ( str( uuid.uuid4( ) ).split('-')[0].strip( ), os.path.basename( filename ).replace(":", "-" ) )
+        #
+        process_single_filename_lower_audio( filename, newfile, new_audio_bit_rate )
+        #
+        os.chmod(newfile, 0o644 )
+        shutil.move( newfile, filename )
+        dt0 = time.perf_counter( ) - time0
+        logging.info( 'processed file %02d / %02d in %0.3f seconds' % (
+            idx + 1, len( fnames_dict ), dt0 ) )
+        list_processed.append( 'processed file %02d / %02d in %0.3f seconds' % (
+            idx + 1, len( fnames_dict ), dt0 ) )
+        json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+    dt00 = time.perf_counter( ) - time00
+    logging.info( 'took %0.3f seconds to process %d files' % (
+        dt00, len( fnames_dict ) ) )
+    list_processed.append( 'took %0.3f seconds to process %d files' % (
+        dt00, len( fnames_dict ) ) )
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+    
 def process_multiple_directories_AVI(
     directory_names = [ os.getcwd( ), ],
     qual = 22,
