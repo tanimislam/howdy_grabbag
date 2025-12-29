@@ -4,7 +4,8 @@ This converts an MP4 TV file, with SRT file, and given TV show and season and ep
 
 import mutagen.mp4, time, os, sys, titlecase
 import uuid, logging, subprocess
-from howdy_grabbag.utils import find_ffmpeg_exec
+from howdy_grabbag.utils import find_ffmpeg_exec, get_rsync_commands_lowlevel, rsync_upload_mkv
+from howdy.core import SSHUploadPaths
 from howdy.tv import tv_attic
 from shutil import which
 from argparse import ArgumentParser
@@ -65,6 +66,7 @@ def create_mkv_file(
         try: os.remove( srtfile )
         except: pass
     logging.info( 'created %s in %0.3f seconds.' % ( newfile, time.perf_counter( ) - time0 ) )
+    return newfile
 
 def main( ):
     parser = ArgumentParser( )
@@ -88,6 +90,18 @@ def main( ):
     parser.add_argument(
         '--noinfo', dest='do_info', action='store_false', default = True,
         help = 'If chosen, then run with NO INFO logging (less debugging).' )
+    #
+    subparser = parser.add_subparsers(
+        help = 'Option of transforming (using HandBrakeCLI) to smaller size MKV file.',
+        dest = 'choose_option' )
+    #
+    ## SSH file to remote directory
+    parser_ssh = subparser.add_parser(
+        'ssh', help = 'Use the collection of remote media directory collections to upload final MKV movie to remote SSH server.' )
+    parser_ssh.add_argument( '-A', '--alias', dest = 'ssh_alias', type = str, action = 'store', required = True,
+                             help = 'The alias to identify the remote tv media directory collection, which contains movies.' )
+    parser_ssh.add_argument( '-T', '--tvshow', dest = 'tvshow', type = str, action = 'store', default = None,
+                             help = 'Optional name of the TV show directory into which to put the TV media file.' )
     #
     args = parser.parse_args( )
     #
@@ -121,10 +135,48 @@ def main( ):
         epno = int( splitseaseps[1] )
     except:
         print( 'Error, invalid episode number.' )
-        return        
+        return
+    joblib_dict = {
+        'mp4tv'     : args.mp4,
+        'tvshow'    : args.seriesName,
+        'seasno'    : seasno,
+        'epno'      : epno,
+        'srtfile'   : args.srt,
+        'do_delete' : args.do_delete,
+        'outdir'    : args.outdir,
+        'do_ssh'    : False }
+    if args.choose_option == 'ssh':
+        joblib_dict[ 'do_ssh' ] = True
+        joblib_dict[ 'alias'  ] = args.ssh_alias
+        tvshow = joblib_dict[ 'tvshow' ]
+        if args.tvshow is not None: tvshow = args.tvshow
+        #
+        ## try this out first, check find alias
+        data_init = get_rsync_commands_lowlevel(
+            joblib_dict[ 'alias' ], tvshow, "", mediatype = SSHUploadPaths.MediaType.tv )
+        print( data_init )
+        if data_init is None:
+            return
+        valid_subdirs = sorted(filter(lambda subdir: get_rsync_commands_lowlevel(
+            joblib_dict[ 'alias' ], subdir, "", mediatype = SSHUploadPaths.MediaType.tv ) is not None,
+                                    set([ os.path.join( tvshow, 'Season %d' % seasno ),
+                                          os.path.join( tvshow, 'Season %02d' % seasno ) ] ) ) )
+        if len( valid_subdirs ) == 0:
+            return
+        joblib_dict[ 'subdir' ] = valid_subdirs[ 0 ]    
     #
-    create_mkv_file(
-        args.mp4, args.seriesName, seasno, epno,
-        delete_files = args.do_delete,
-        srtfile = args.srt,
-        outdir = args.outdir )
+    outputfile = create_mkv_file(
+        joblib_dict[ 'mp4tv'  ], #args.mp4,
+        joblib_dict[ 'tvshow' ], #args.seriesName,
+        joblib_dict[ 'seasno' ],
+        joblib_dict[ 'epno'   ],
+        delete_files = joblib_dict[ 'do_delete' ], #args.do_delete,
+        srtfile = joblib_dict[ 'srtfile' ], # args.srt,
+        outdir = joblib_dict[ 'outdir' ] ) #args.outdir )
+    if joblib_dict[ 'do_ssh' ]:
+        mycmd, mxcmd = get_rsync_commands_lowlevel(
+            joblib_dict[ 'alias' ],
+            joblib_dict[ 'subdir' ],
+            outputfile,
+            mediatype = SSHUploadPaths.MediaType.tv )
+        rsync_upload_mkv( mycmd, mxcmd, numtries = 10 )
