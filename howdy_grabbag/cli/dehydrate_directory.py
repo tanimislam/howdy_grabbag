@@ -210,6 +210,8 @@ def main_dehydrate_files( ):
     ##
     parser.add_argument( '-Q', '--quality', dest = 'parser_dehydrate_quality', metavar = 'QUALITY', type = int, action = 'store',
                          default = 28, help = 'Will dehydrate shows using HEVC video codec with this quality. Default is 28. Must be >= 20.' )
+    parser.add_argument( '-B', '--bitrate', dest = 'parser_audio_bitstring', metavar = 'BITRATE', type = str, action = 'store', default = '160',
+                         help = 'Will dehydrate shows using this audio bitrate in KBPS, or using value = "copy". Default is 160.' )
     parser.add_argument( '-J', '--jsonfile', dest = 'parser_dehydrate_jsonfile', metavar = 'JSONFILE', type = str, action = 'store', default = 'processed_stuff.json',
                          help = 'Name of the JSON file to store progress-as-you-go-along on directory dehydration. Default file name = "processed_stuff.json".' )
     #
@@ -224,9 +226,18 @@ def main_dehydrate_files( ):
     jsonfile = os.path.realpath( os.path.expanduser( args.parser_dehydrate_jsonfile ) )
     assert( os.path.basename( jsonfile ).endswith( '.json' ) )
     assert( quality >= 20 )
+    #
+    ##
+    #
+    ##
+    audio_bit_string = args.parser_audio_bitstring.strip( ).lower( )
+    if audio_bit_string != 'copy':
+        assert( audio_bit_string.isdigit( ) )
+    #
     if not args.do_avi:
         process_multiple_files(
             args.inputfiles, qual = quality,
+            audio_bit_string = audio_bit_string,
             output_json_file = jsonfile )
         return
     #
