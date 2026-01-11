@@ -13,6 +13,15 @@ assert( _hcli_exec is not None )
 assert( _mkvpropedit_exec is not None )
 assert( _nice_exec is not None )
 
+def _get_directory_names( all_directories ):
+    directories_not_globs = set(filter(lambda dirname: '*' not in dirname, all_directories ) )
+    directories_globs     = set(filter(lambda dirname: '*' in dirname, all_directories ) )
+    directory_names_1 = set(filter(os.path.isdir, map(lambda dirname: os.path.realpath( os.path.expanduser( dirname ) ), directories_not_globs ) ) )
+    directory_names_2 = set(filter(os.path.isdir, map(lambda dirname: os.path.realpath( os.path.expanduser( dirname ) ),
+                                                      chain.from_iterable(map(lambda globdir: glob.glob( globdir ), directories_globs ) ) ) ) )
+    directory_names   = sorted( directory_names_1 | directory_names_2 )
+    return directory_names
+
 def get_dvd_chapter_infos_from_stdout( 
     stdout_val_line_split, min_duration_mins = 19 ):
     #
@@ -74,7 +83,7 @@ def get_dvd_chapter_infos_in_directory(
     return dvd_chapter_infos
 
 def find_all_title_tuples_in_order(
-    glob_dvd_dirs, min_duration_mins = 19 ):
+    directory_names, min_duration_mins = 19 ):
     #
     with Pool( processes = cpu_count( ) ) as pool:
         directories_from_glob = sorted(
@@ -82,7 +91,7 @@ def find_all_title_tuples_in_order(
                    pool.map(
                        lambda dirname: (dirname, get_dvd_chapter_infos_in_directory(
                            dirname, min_duration_mins = min_duration_mins ) ),
-                       set(map(os.path.realpath, glob.glob( glob_dvd_dirs ) ) ) ) ),
+                       directory_names ) ),
             key = lambda entry: entry[0] )
         logging.debug( directories_from_glob )
     title_tuples_in_order = sorted(
@@ -116,13 +125,16 @@ def process_single_episode_in_order(
     logging.debug( stdout_val.decode( 'utf8' ) )
     return newfile
 
-def process_single_season( glob_dvd_dirs, showname, seasno, outdir, jsonfile, quality = 22, min_duration_mins = 19 ):
+def process_single_season(
+        directory_names, showname, seasno, outdir, jsonfile, quality = 22, min_duration_mins = 19,
+        firstAiredYear = None ):
     assert( os.path.isdir( outdir ) )
     assert( os.path.basename( jsonfile ).endswith( '.json' ) )
-    title_tuples_in_order = find_all_title_tuples_in_order( glob_dvd_dirs, min_duration_mins = min_duration_mins )
+    title_tuples_in_order = find_all_title_tuples_in_order(
+        directory_names, min_duration_mins = min_duration_mins )
     #
     epdicts = tv_attic.get_tot_epdict_tmdb(
-        showname, firstAiredYear = None, showSpecials = True )
+        showname, firstAiredYear = firstAiredYear, showSpecials = True )
     epdicts_sub = { seasno : { epno : epdicts[seasno][epno][0].replace("/", "; ") for
                                epno in epdicts[seasno] } for seasno in epdicts }
     if seasno not in epdicts_sub:
@@ -174,18 +186,20 @@ def main( ):
     """
     Example command to run:
 
-    python3 dvd_to_mkv.py -g "EERIE_INDIANA_DISC_*" -o mov -s "Eerie, Indiana" -S 1 -Q 22 -J processed_s01.json -m 19
+    python3 dvd_to_mkv.py -d "EERIE_INDIANA_DISC_*" -o mov -s "Eerie, Indiana" -S 1 -Q 22 -J processed_s01.json -m 19
     
     """
     parser = ArgumentParser( )
-    parser.add_argument( '-g', '--glob', dest = 'glob_dvd_dirs', type = str, action = 'store', required = True,
-                         help = 'The glob string of DVD directories to create episodes.' )
+    parser.add_argument( '-d', '--directories', dest='directories', type=str, action = 'store', nargs = '+', default = [ os.getcwd( ), ],
+                        help = 'Name of the DVD directories to create episodes. Default is %s.' % [ os.getcwd( ), ] )
     parser.add_argument( '-o', '--outdir', dest = 'outdir', type = str, action = 'store', required = True,
                          help = 'The output directory into which to store the TV show episodes.' )
     parser.add_argument( '-s', '--showname', dest = 'showname', type = str, action = 'store', required = True,
                          help = 'The name of the TV show to look for.' )    
     parser.add_argument( '-S', '--season', dest = 'season', type = int, action = 'store', default = 1,
-                         help = 'The season number of the DVD collection needed to process. Default is 1.' )
+                         help = 'The season number of the DVD collection needed to process. Default is 1.' )    
+    parser.add_argument( '-F', '--firstAiredYear', type=int, action='store',
+                       help = 'Year in which the first episode of the TV show aired.' )
     parser.add_argument( '-Q', '--quality', dest = 'quality', type = int, action = 'store',
                          default = 22, help = 'Will dehydrate shows using HEVC video codec with this quality. Default is 22. Must be >= 20.' )
     parser.add_argument( '-m', '--min_duration_mins', dest = 'min_duration_mins', type = int, action = 'store', default = 19,
@@ -204,7 +218,8 @@ def main( ):
     #
     outdir = os.path.realpath( os.path.expanduser( args.outdir ) )
     assert( os.path.isdir( outdir ) )
-    glob_dvd_dirs = args.glob_dvd_dirs.strip( )
+    #
+    directory_names = _get_directory_names( args.directories )
     #
     showname = args.showname.strip( )
     epdicts = tv_attic.get_tot_epdict_tmdb(
@@ -218,10 +233,11 @@ def main( ):
     #
     ## now do the things
     process_single_season(
-        glob_dvd_dirs,
+        directory_names,
         showname,
         seasno,
         outdir,
         jsonfile,
         quality = args.quality,
-        min_duration_mins = args.min_duration_mins )
+        min_duration_mins = args.min_duration_mins,
+        firstAiredYear = args.firstAiredYear )
