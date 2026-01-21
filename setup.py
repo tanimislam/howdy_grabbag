@@ -69,6 +69,7 @@ setup(
             'dehydrate_directory      = howdy_grabbag.cli.dehydrate_directory:main',
             'dehydrate_files          = howdy_grabbag.cli.dehydrate_directory:main_dehydrate_files',
             'lower_audio_directory    = howdy_grabbag.cli.dehydrate_directory:main_lower_audio',
+            'lower_audio_files        = howdy_grabbag.cli.dehydrate_directory:main_lower_audio_files',
             'list_directory           = howdy_grabbag.cli.dehydrate_directory:main_list',
             'subtitle_directory       = howdy_grabbag.cli.dehydrate_directory:main_subtitles',
             'spotify_add_and_fix      = howdy_grabbag.cli.spotify_add_and_fix:main',

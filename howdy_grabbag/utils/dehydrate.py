@@ -86,6 +86,15 @@ def get_tv_library_local( library_name = 'TV Shows' ):
         library_name, token = token, num_threads = cpu_count( ) )
     return tvdata
 
+def get_fnames_from_directories( directory_names ):
+    fnames = sorted(set(
+        chain.from_iterable(map(
+            lambda directory_name:
+            glob.glob( os.path.join( directory_name, '*.mp4' ) ) +
+            glob.glob( os.path.join( directory_name, '*.mkv' ) ) +
+            glob.glob( os.path.join( directory_name, '*.webm' ) ), directory_names ) ) ) )
+    return fnames
+
 class DATAFORMAT( Enum ):
     IS_AVI_OR_MPEG = 1
     IS_LATER = 2
@@ -332,13 +341,7 @@ def process_single_show_avi( df_sub, showname, qual = 20, audio_bit_string = '16
         dt00, len( episodes_sorted ) ) )
     json.dump( list_processed, open( 'processed_stuff_avi.json', 'w' ), indent = 1 )
 
-def find_files_to_process( directory_names = [ os.getcwd( ), ], do_hevc = True, min_bitrate = 2_000 ):
-    fnames = sorted(set(
-        chain.from_iterable(map(
-            lambda directory_name:
-            glob.glob( os.path.join( directory_name, '*.mp4' ) ) +
-            glob.glob( os.path.join( directory_name, '*.mkv' ) ) +
-            glob.glob( os.path.join( directory_name, '*.webm' ) ), directory_names ) ) ) )
+def find_files_to_process( fnames, do_hevc = True, min_bitrate = 2_000 ):
     with Pool( processes = cpu_count( ) ) as pool:
         list_of_files_hevc_br = list(filter(
             lambda tup: tup[1] is not None and tup[1]['bit_rate_kbps'] >= min_bitrate,
@@ -348,12 +351,7 @@ def find_files_to_process( directory_names = [ os.getcwd( ), ], do_hevc = True, 
                                                 list_of_files_hevc_br ) )
         return dict( list_of_files_hevc_br )
 
-def find_files_to_process_AVI( directory_names = [ os.getcwd( ), ] ):
-    fnames = sorted(set(
-        chain.from_iterable(map(
-            lambda directory_name:
-            glob.glob( os.path.join( directory_name, '*.avi' ) ) +
-            glob.glob( os.path.join( directory_name, '*.mpg' ) ), directory_names ) ) ) ) 
+def find_files_to_process_AVI( fnames ):
     with Pool( processes = cpu_count( ) ) as pool:
         return dict( 
         pool.map(lambda fname: ( fname, _get_bitrate_AVI( fname ) ), fnames ) )
@@ -372,8 +370,8 @@ def process_multiple_directories_subtitles(
       _mkvmerge_exec = which( 'mkvmerge' )
       assert( _mkvmerge_exec is not None )
     fnames_dict = find_files_to_process(
-      directory_names = directory_names, do_hevc = True,
-      min_bitrate = 100 )
+        get_fnames_from_directories( directory_names ),
+        do_hevc = True, min_bitrate = 100 )
     time00 = time.perf_counter( )
     list_processed = [ 'found %02d files to subtitle in %s.' % (
       len( fnames_dict ), os.path.abspath( directory_name ) ), ]
@@ -448,9 +446,14 @@ def process_multiple_directories(
 def process_multiple_directories_lower_audio(
     directory_names = [ os.getcwd( ), ], min_audio_bit_rate = 256,
         output_json_file = 'processed_audio_stuff.json', new_audio_bit_rate = 160 ):
+    #
     assert( os.path.basename( output_json_file ).endswith( '.json' ) )
-    fnames_dict = dict(filter(lambda entry: entry[1][ 'audio_bit_rate_kbps' ] > min_audio_bit_rate, find_files_to_process(
-        directory_names = directory_names, do_hevc = True, min_bitrate = 0 ).items( ) ) )
+    fnames_dict = dict(
+        filter(lambda entry: entry[1][ 'audio_bit_rate_kbps' ] > min_audio_bit_rate,
+               find_files_to_process(
+                   get_fnames_from_directories( directory_names ),
+                   do_hevc = True, min_bitrate = 0 ).items( ) ) )
+    #
     time00 = time.perf_counter( )
     list_processed = [ 'found %02d files in %s with audio sizes > %d kbps. Will lower audio bit rate to %d kbps.' % (
         len( fnames_dict ), list(map(os.path.abspath, directory_names ) ), min_audio_bit_rate, new_audio_bit_rate ), ]
@@ -484,6 +487,7 @@ def process_multiple_directories_AVI(
 ):
     assert( os.path.basename( output_json_file ).endswith( '.json' ) )
     fnames_dict = find_files_to_process_AVI(
+        get_fnames_from_directories( directory_names ),
         directory_names = directory_names )
     time00 = time.perf_counter( )
     list_processed = [ 'found %02d files to dehydrate in %s.' % (
@@ -553,7 +557,9 @@ def process_multiple_files(
 
 
 def process_multiple_files_AVI(
-        file_names, qual = 28, output_json_file = 'processed_stuff.json', audio_bit_string = '160' ):
+    file_names, qual = 28,
+    output_json_file = 'processed_stuff.json',
+    audio_bit_string = '160' ):
     #
     assert( os.path.basename( output_json_file ).endswith( '.json' ) )
     act_file_names = sorted(filter(os.path.isfile,
@@ -587,4 +593,39 @@ def process_multiple_files_AVI(
         dt00, len( act_file_names ) ) )
     list_processed.append( 'took %0.3f seconds to process %d files' % (
         dt00, len( act_file_names ) ) )
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+
+
+def process_multiple_files_lower_audio(
+    file_names, min_audio_bit_rate = 256,
+    output_json_file = 'processed_audio_stuff.json', new_audio_bit_rate = 160 ):
+    #
+    assert( os.path.basename( output_json_file ).endswith( '.json' ) )
+    act_file_names = sorted(filter(
+        os.path.isfile, set(map(os.path.realpath, file_names))))
+    fnames_dict = dict(filter(lambda entry: entry[1][ 'audio_bit_rate_kbps' ] > min_audio_bit_rate, find_files_to_process(
+        act_file_names, do_hevc = True, min_bitrate = 0 ).items( ) ) )
+    time00 = time.perf_counter( )
+    list_processed = [ 'found %02d files in %s with audio sizes > %d kbps. Will lower audio bit rate to %d kbps.' % (
+        len( fnames_dict ), list(map(os.path.abspath, directory_names ) ), min_audio_bit_rate, new_audio_bit_rate ), ]
+    json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+    for idx, filename in enumerate(sorted( fnames_dict ) ):
+        time0 = time.perf_counter( )
+        newfile = '%s-%s' % ( str( uuid.uuid4( ) ).split('-')[0].strip( ), os.path.basename( filename ).replace(":", "-" ) )
+        #
+        process_single_filename_lower_audio( filename, newfile, new_audio_bit_rate )
+        #
+        os.chmod(newfile, 0o644 )
+        shutil.move( newfile, filename )
+        dt0 = time.perf_counter( ) - time0
+        logging.info( 'processed file %02d / %02d in %0.3f seconds' % (
+            idx + 1, len( fnames_dict ), dt0 ) )
+        list_processed.append( 'processed file %02d / %02d in %0.3f seconds' % (
+            idx + 1, len( fnames_dict ), dt0 ) )
+        json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
+    dt00 = time.perf_counter( ) - time00
+    logging.info( 'took %0.3f seconds to process %d files' % (
+        dt00, len( fnames_dict ) ) )
+    list_processed.append( 'took %0.3f seconds to process %d files' % (
+        dt00, len( fnames_dict ) ) )
     json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
