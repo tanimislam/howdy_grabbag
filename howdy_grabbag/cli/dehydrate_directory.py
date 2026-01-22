@@ -148,8 +148,6 @@ def main_lower_audio_files( ):
     logger = logging.getLogger( )
     if args.do_info: logger.setLevel( logging.INFO )
     #
-    directory_names = _get_directory_names( args.directories )
-    #
     ## dehydrate directory
     jsonfile = os.path.expanduser( args.parser_lower_audio_jsonfile )
     assert( os.path.basename( jsonfile ).endswith( '.json' ) )

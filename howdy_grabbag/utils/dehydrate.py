@@ -606,8 +606,8 @@ def process_multiple_files_lower_audio(
     fnames_dict = dict(filter(lambda entry: entry[1][ 'audio_bit_rate_kbps' ] > min_audio_bit_rate, find_files_to_process(
         act_file_names, do_hevc = True, min_bitrate = 0 ).items( ) ) )
     time00 = time.perf_counter( )
-    list_processed = [ 'found %02d files in %s with audio sizes > %d kbps. Will lower audio bit rate to %d kbps.' % (
-        len( fnames_dict ), list(map(os.path.abspath, directory_names ) ), min_audio_bit_rate, new_audio_bit_rate ), ]
+    list_processed = [ 'found %02d files with audio sizes > %d kbps. Will lower audio bit rate to %d kbps.' % (
+        len( fnames_dict ), min_audio_bit_rate, new_audio_bit_rate ), ]
     json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
     for idx, filename in enumerate(sorted( fnames_dict ) ):
         time0 = time.perf_counter( )
