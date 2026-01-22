@@ -9,6 +9,7 @@ from itertools import chain
 from howdy_grabbag.utils.dehydrate import (
     find_files_to_process,
     find_files_to_process_AVI,
+    get_fnames_from_directories,
     process_multiple_directories,
     process_multiple_directories_AVI,
     process_multiple_directories_subtitles,
@@ -73,13 +74,14 @@ def main( ):
         assert( audio_bit_string.isdigit( ) )
     if not args.do_avi:
         process_multiple_directories(
-            directory_names = directory_names, do_hevc = args.do_hevc,
+            get_fnames_from_directories( directory_names ),
+            do_hevc = args.do_hevc,
             min_bitrate = args.minbitrate, qual = quality,
             audio_bit_string = audio_bit_string,
             output_json_file = jsonfile )
     else:
         process_multiple_directories_AVI(
-            directory_names = directory_names,
+            get_fnames_from_directories( directory_names ),
             qual = quality,
             output_json_file = jsonfile )
 
@@ -187,7 +189,7 @@ def main_list( ):
     ## list filenames
     if not args.do_avi:
         fnames_dict = find_files_to_process(
-            directory_names = directory_names,
+            get_fnames_from_directories( directory_names ),
             do_hevc = args.do_hevc, min_bitrate = args.minbitrate )
         data = list( zip(
             map(os.path.basename, sorted( fnames_dict ) ),
@@ -199,7 +201,7 @@ def main_list( ):
         return
     #
     fnames_dict_AVI = find_files_to_process_AVI(
-        directory_names = directory_names )
+        get_fnames_from_directories( directory_names ) )
     data_AVI = list( zip(
         map(os.path.basename, sorted( fnames_dict_AVI ) ),
         map(lambda fname: '%0.1f' % fnames_dict_AVI[ fname ][ 'bit_rate_kbps' ], sorted( fnames_dict_AVI ) ),

@@ -85,7 +85,7 @@ def get_rsync_commands(
 
 def rsync_upload_mkv( mycmd, mxcmd, numtries = 10 ):
     assert( numtries > 0 )
-    mystr_split = [ 'STARTING THIS RSYNC CMD: %s' % mxcmd ]
+    mystr_split = [ 'STARTING THIS RSYNC CMD: %s' % mycmd ] # 20260121 TODO: try mycmd
     logging.info( mystr_split[-1] )
     logging.info( 'TRYING UP TO %d TIMES.' % numtries )
     time0 = time.perf_counter( )
