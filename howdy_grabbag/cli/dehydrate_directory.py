@@ -74,14 +74,14 @@ def main( ):
         assert( audio_bit_string.isdigit( ) )
     if not args.do_avi:
         process_multiple_directories(
-            get_fnames_from_directories( directory_names ),
+            directory_names = directory_names,
             do_hevc = args.do_hevc,
             min_bitrate = args.minbitrate, qual = quality,
             audio_bit_string = audio_bit_string,
             output_json_file = jsonfile )
     else:
         process_multiple_directories_AVI(
-            get_fnames_from_directories( directory_names ),
+            directory_names = directory_names,
             qual = quality,
             output_json_file = jsonfile )
 

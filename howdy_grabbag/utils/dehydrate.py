@@ -410,11 +410,12 @@ def process_multiple_directories_subtitles(
     json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
 
 def process_multiple_directories(
-    directory_names = [ os.getcwd( ), ], do_hevc = True, min_bitrate = 2_000,
+        directory_names = [ os.getcwd( ), ], do_hevc = True, min_bitrate = 2_000,
         qual = 28, output_json_file = 'processed_stuff.json', audio_bit_string = '160' ):
     assert( os.path.basename( output_json_file ).endswith( '.json' ) )
     fnames_dict = find_files_to_process(
-        directory_names = directory_names, do_hevc = do_hevc,
+        get_fnames_from_directories( directory_names ),
+        do_hevc = do_hevc,
         min_bitrate = min_bitrate )
     time00 = time.perf_counter( )
     list_processed = [ 'found %02d files to dehydrate in %s.' % (
