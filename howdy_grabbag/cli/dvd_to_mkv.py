@@ -61,7 +61,7 @@ def _get_stdout_val_line_split( video_ts_dir ):
     stdout_val_line_split = list(
         map(lambda line: line.strip( ),
             filter(lambda line: line.strip( ).startswith( '+' ),
-                   stdout_val.decode( 'utf8' ).split( '\n' ) ) ) )
+                   stdout_val.decode( 'utf8', 'ignore' ).split( '\n' ) ) ) )
     return stdout_val_line_split
                    
 def get_dvd_chapter_infos_in_directory(
