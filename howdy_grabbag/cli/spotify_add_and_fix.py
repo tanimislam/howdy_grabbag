@@ -1,11 +1,8 @@
 import os, sys, numpy, glob, pandas, time, datetime, logging
-# from plexapi.server import PlexServer
+from howdy.music import music_spotify
 from itertools import chain
 from pathos.multiprocessing import Pool, cpu_count
 from argparse import ArgumentParser
-#
-# from howdy.core import core, get_maximum_matchval
-from howdy.music import music_spotify
 
 def main( ):
     parser = ArgumentParser( )

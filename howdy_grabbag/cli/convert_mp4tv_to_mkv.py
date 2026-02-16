@@ -4,16 +4,11 @@ This converts an MP4 TV file, with SRT file, and given TV show and season and ep
 
 import mutagen.mp4, time, os, sys, titlecase
 import uuid, logging, subprocess
-from howdy_grabbag.utils import find_ffmpeg_exec, get_rsync_commands_lowlevel, rsync_upload_mkv
+from howdy_grabbag.utils import get_rsync_commands_lowlevel, rsync_upload_mkv
+from howdy_grabbag import ffmpeg_exec, mkvmerge_exec
 from howdy.core import SSHUploadPaths
 from howdy.tv import tv_attic
-from shutil import which
 from argparse import ArgumentParser
-
-ffmpeg_exec = find_ffmpeg_exec( )
-mkvmerge_exec = which( 'mkvmerge' )
-assert( all(map(lambda exec_f: exec_f is not None,
-                ( ffmpeg_exec, mkvmerge_exec,  ) ) ) )
 
 def create_mkv_file(
     mp4tv, tvshow, seasno, epno,

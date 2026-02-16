@@ -1,6 +1,6 @@
 import os, sys, glob, subprocess, logging, time, json, re, datetime
 from shutil import which
-from howdy_grabbag.utils import hcli_exec
+from howdy_grabbag import hcli_exec
 
 def _get_dvd_chapter_infos_from_stdout( 
     stdout_val_line_split, min_duration_mins = 19 ):

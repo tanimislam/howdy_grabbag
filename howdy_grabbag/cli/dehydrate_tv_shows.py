@@ -1,4 +1,4 @@
-"""
+r"""
 This goes through your Plex_ TV library, on your *local* server, and tries to *shrink* episodes (using HEVC_ video quality 28) that start off with a bit rate *above* a certain level, by default 2000 kbps.
 
 Lots of words, huh?
@@ -8,7 +8,7 @@ This can *either* tell a table of TV show data on your locally running Plex_ ser
 .. _Plex: https://plex.tv
 .. _HEVC: https://en.wikipedia.org/wiki/High_Efficiency_Video_Coding
 """
-import os, sys, logging, time, pandas, numpy, json, subprocess, shutil, re, redis
+import os, sys, logging, time, pandas, numpy, json, subprocess, shutil, re
 from enum import Enum
 from howdy.core import core, session
 from howdy.tv import tv, get_token, tv_attic, get_tvdb_api, TMDBShowIds
@@ -16,14 +16,12 @@ from howdy.music import music
 from howdy.movie import tmdb_apiKey
 from pathos.multiprocessing import Pool, cpu_count
 from tabulate import tabulate
-from shutil import which
 from argparse import ArgumentParser
+#
+from howdy_grabbag import (
+    ffmpeg_exec, ffprobe_exec, nice_exec, hcli_exec )
 
 _MINBITRATE   = 1000
-_ffmpeg_exec  = which( 'ffmpeg' )
-_ffprobe_exec = which( 'ffprobe' )
-assert( _ffmpeg_exec is not None )
-assert( _ffprobe_exec is not None )
 
 def get_tv_library_local( library_name = 'TV Shows' ):
     fullURL, token = core.checkServerCredentials( doLocal=True )
@@ -147,13 +145,6 @@ def summarize_single_show( df_sub, showname, minbitrate, mode_dataformat = DATAF
     print( '%s\n' % tabulate( data, headers = [ 'PARAMETER', 'INFO' ] ) )
 
 def process_single_show( df_sub, showname, do_hevc = True, qual = 28, output_json_file = 'processed_stuff.json' ):
-    #
-    ## check we have nice and HandBrakeCLI
-    nice_exec = which( 'nice' )
-    hcli_exec = which( 'HandBrakeCLI' )
-    assert( nice_exec is not None )
-    assert( hcli_exec is not None )
-    #
     df_show = single_show_summary_dataframe( df_sub, showname )
     df_show_sub = df_show.copy( )
     if not do_hevc:
@@ -190,13 +181,6 @@ def process_single_show( df_sub, showname, do_hevc = True, qual = 28, output_jso
     json.dump( list_processed, open( output_json_file, 'w' ), indent = 1 )
 
 def process_single_show_avi( df_sub, showname, qual = 20, output_json_file = 'processed_stuff_avi.json' ):
-    #
-    ## check we have nice and HandBrakeCLI
-    nice_exec = which( 'nice' )
-    hcli_exec = which( 'HandBrakeCLI' )
-    assert( nice_exec is not None )
-    assert( hcli_exec is not None )
-    #
     df_show_sub = single_show_summary_dataframe(
         df_sub, showname, mode_dataformat = DATAFORMAT.IS_AVI_OR_MPEG )
     #
@@ -213,7 +197,7 @@ def process_single_show_avi( df_sub, showname, qual = 20, output_json_file = 'pr
     for idx, filename in enumerate(episodes_sorted):
         time0 = time.perf_counter( )
         dirname = os.path.dirname( filename )
-        newfile = re.sub( '\.avi$', '.mkv', os.path.basename( filename ) )
+        newfile = re.sub( r'\.avi$', '.mkv', os.path.basename( filename ) )
         try:
             stdout_val = subprocess.check_output([
                 nice_exec, '-n', '19', hcli_exec,

@@ -3,13 +3,6 @@ from howdy.core import core_rsync, SSHUploadPaths
 from itertools import chain
 from shutil import which
 
-hcli_exec        = which( 'HandBrakeCLI' )
-mkvpropedit_exec = which( 'mkvpropedit' )
-nice_exec        = which( 'nice' )
-assert( hcli_exec is not None )
-assert( mkvpropedit_exec is not None )
-assert( nice_exec is not None )
-
 def get_directory_names( all_directories ):
     directories_not_globs = set(filter(lambda dirname: '*' not in dirname, all_directories ) )
     directories_globs     = set(filter(lambda dirname: '*' in dirname, all_directories ) )
@@ -124,19 +117,6 @@ def rsync_upload_mkv( mycmd, mxcmd, numtries = 10 ):
         numtries, time.perf_counter( ) - time0 ) )
     logging.info( mystr_split[-1] )
     return 'FAILURE', '\n'.join( mystr_split )
-
-def find_ffmpeg_exec( ):
-    ffmpeg_exec = which( 'ffmpeg' )
-    if ffmpeg_exec is None: return None
-    #
-    ## now check if we can execute on it
-    if os.access( ffmpeg_exec, os.X_OK ): return ffmpeg_exec
-    #
-    ## otherwise look in /usr/bin
-    ffmpeg_exec = which( 'ffmpeg', path='/usr/bin')
-    if ffmpeg_exec is None: return None
-    if os.access( ffmpeg_exec, os.X_OK ): return ffmpeg_exec
-    return None
 
 def create_epdicts_from_jsonfile( jsonfile ):
     assert( os.path.exists( jsonfile ) )

@@ -9,9 +9,9 @@ Requires titlecase, mutagen
 Requires executables: ffmpeg, mkvmerge, HandBrakeCLI
 """
 
-import time, os, sys, titlecase, logging, subprocess
+import time, os, sys, titlecase, logging
 from howdy.core import SSHUploadPaths
-from howdy_grabbag.utils import find_ffmpeg_exec, get_rsync_commands_lowlevel, rsync_upload_mkv
+from howdy_grabbag.utils import get_rsync_commands_lowlevel, rsync_upload_mkv
 from howdy.tv import tv_attic
 from argparse import ArgumentParser
 

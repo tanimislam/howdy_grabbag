@@ -15,21 +15,19 @@ signal.signal( signal.SIGINT, signal_handler )
 import mutagen.mp4, time, os, sys, titlecase
 import uuid, logging, subprocess
 from howdy.core import core_rsync, SSHUploadPaths
-from howdy_grabbag.utils import find_ffmpeg_exec, get_rsync_commands, rsync_upload_mkv
+from howdy_grabbag.utils import get_rsync_commands, rsync_upload_mkv
 from shutil import which
 from argparse import ArgumentParser
-
-ffmpeg_exec = find_ffmpeg_exec( )
-mkvmerge_exec = which( 'mkvmerge' )
-mkvpropedit_exec = which( 'mkvpropedit' )
-hcli_exec = which( 'HandBrakeCLI' )
-assert( all(map(lambda exec_f: exec_f is not None,
-                ( ffmpeg_exec, mkvmerge_exec, mkvpropedit_exec, hcli_exec ) ) ) )
+#
+from howdy_grabbag import (
+    ffmpeg_exec, mkvmerge_exec,
+    mkvpropedit_exec, hcli_exec )
 
 def convert_mp4_movie(
-        mp4movie, name, year, quality = 28,
-        srtfile = None,
-        delete_files = False, outdir = os.getcwd( ) ):
+    mp4movie, name, year, quality = 28,
+    srtfile = None,
+    delete_files = False, outdir = os.getcwd( ) ):
+    #
     time0 = time.perf_counter( )
     assert( os.path.isfile( mp4movie ) )
     assert( os.path.basename( mp4movie ).lower( ).endswith( '.mp4' ) )
@@ -51,12 +49,10 @@ def convert_mp4_movie(
     if srtfile is not None:
         tmpmkv = '%s.mkv' % '-'.join( str( uuid.uuid4( ) ).split('-')[:2] )
         try:
-          stdout_val = subprocess.check_output(
-            [
-              mkvmerge_exec, '-o', tmpmkv, newfile,
-              '--language', '0:eng',
-              '--track-name', '0:English', srtfile ],
-            stderr = subprocess.STDOUT )
+            stdout_val = subprocess.check_output([
+                mkvmerge_exec, '-o', tmpmkv, newfile,
+                '--language', '0:eng',
+                '--track-name', '0:English', srtfile ], stderr = subprocess.STDOUT )                                                 
         except: pass
         os.rename( tmpmkv, newfile )
     #
@@ -80,10 +76,12 @@ def put_info_mp4movie( mp4movie, name, year, language = None ):
     logging.info( 'took %0.3f seconds to add metadata to %s.' % (
         time.perf_counter( ) - time0, mp4movie ) )
 
-def create_mkv_file( mp4movie, name, year,
-                     srtfile = None,
-                     delete_files = False, outdir = os.getcwd( ),
-                     language = None ):
+def create_mkv_file(
+    mp4movie, name, year,
+    srtfile = None,
+    delete_files = False, outdir = os.getcwd( ),
+    language = None ):
+    #
     time0 = time.perf_counter( )
     assert( os.path.isfile( mp4movie ) )
     assert( os.path.basename( mp4movie ).lower( ).endswith('.mp4' ) )

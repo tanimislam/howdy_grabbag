@@ -2,7 +2,8 @@ import os, sys, logging, subprocess, time, json
 from pathos.multiprocessing import Pool, cpu_count
 from howdy.tv import tv_attic
 from howdy_grabbag.utils import (
-    get_directory_names, dvd_utils,
+    get_directory_names, dvd_utils )
+from howdy_grabbag import (
     nice_exec, hcli_exec, mkvpropedit_exec )
 from itertools import chain
 from argparse import ArgumentParser
