@@ -3,6 +3,22 @@ from howdy.core import core_rsync, SSHUploadPaths
 from itertools import chain
 from shutil import which
 
+hcli_exec        = which( 'HandBrakeCLI' )
+mkvpropedit_exec = which( 'mkvpropedit' )
+nice_exec        = which( 'nice' )
+assert( hcli_exec is not None )
+assert( mkvpropedit_exec is not None )
+assert( nice_exec is not None )
+
+def get_directory_names( all_directories ):
+    directories_not_globs = set(filter(lambda dirname: '*' not in dirname, all_directories ) )
+    directories_globs     = set(filter(lambda dirname: '*' in dirname, all_directories ) )
+    directory_names_1 = set(filter(os.path.isdir, map(lambda dirname: os.path.realpath( os.path.expanduser( dirname ) ), directories_not_globs ) ) )
+    directory_names_2 = set(filter(os.path.isdir, map(lambda dirname: os.path.realpath( os.path.expanduser( dirname ) ),
+                                                      chain.from_iterable(map(lambda globdir: glob.glob( globdir ), directories_globs ) ) ) ) )
+    directory_names   = sorted( directory_names_1 | directory_names_2 )
+    return directory_names
+
 def find_valid_aliases( mediatype = SSHUploadPaths.MediaType.movie ):
     data_remote_collections = core_rsync.get_remote_connections( )
     valid_aliases = sorted(
@@ -137,7 +153,7 @@ def rename_files_in_directory( epdicts, series_name, seasno = 1, dirname = "." )
     assert( seasno in epdicts )
     assert( len( set( epdicts[ seasno ] ) - set( filedict ) ) == 0 )
     for epno in sorted( filedict ):
-        suffix = re.sub( ".*\.", "", filedict[epno]).strip()
+        suffix = re.sub( r".*\.", "", filedict[epno]).strip()
         newfile = os.path.join( dirname, "%s - s%02de%02d - %s.%s" % (
             series_name, seasno, epno, epdicts[seasno][epno], suffix ) )
         os.rename( filedict[ epno ], newfile)
