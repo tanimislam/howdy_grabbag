@@ -1,7 +1,57 @@
 import os, sys, time, subprocess, glob, json, titlecase, re, logging, shlex
 from howdy.core import core_rsync, SSHUploadPaths
 from itertools import chain
-from shutil import which
+from howdy_grabbag import ffprobe_exec, ffmpeg_exec, mkvmerge_exec
+
+def get_ffprobe_json( filename ):
+    stdout_val = subprocess.check_output(
+        [ ffprobe_exec, '-v', 'quiet', '-show_streams',
+         '-show_format', '-print_format', 'json', filename ],
+        stderr = subprocess.STDOUT )
+    file_info = json.loads( stdout_val )
+    return file_info
+
+def is_hevc( filename ):
+    data = get_ffprobe_json( filename )
+    return data['streams'][0]['codec_name'].lower( ) == 'hevc'
+
+def get_hevc_bitrate( filename ):
+    try:
+        data = get_ffprobe_json( filename )
+        info = {
+            'is_hevc' :  data['streams'][0]['codec_name'].lower( ) == 'hevc',
+            'bit_rate_kbps' : float( data['format']['bit_rate' ] ) / 1_024, }
+        audio_streams = list(filter(lambda entry: entry['codec_type'] == 'audio', data['streams'] ) )
+        try:
+            bit_rate_audio_1 = sum(map(lambda entry: float( entry[ 'bit_rate' ] ) / 1_024, audio_streams ) )
+        except Exception as e:
+            bit_rate_audio_1 = 0
+        try:
+            bit_rate_audio_2 = sum(map(lambda entry: float( entry[ 'tags']['BPS'] ) / 1_024, audio_streams ) )
+        except Exception as e:
+            bit_rate_audio_2 = 0
+        info[ 'audio_bit_rate_kbps' ] = max( bit_rate_audio_1, bit_rate_audio_2 )
+        return info
+    except Exception as e:
+        logging.debug( 'PROBLEM WITH %s. ERROR MESSAGE = %s.' % (
+            os.path.realpath( filename ), str( e ) ) )
+        return None
+
+def get_bitrate_AVI( filename ):
+    try:
+        data = get_ffprobe_json( filename )
+        info = { 
+            'bit_rate_kbps' : float( data['format']['bit_rate' ] ) / 1_024, }
+        audio_streams = list(filter(lambda entry: entry['codec_type'] == 'audio', data['streams'] ) )
+        try:
+            bit_rate_audio_1 = sum(map(lambda entry: float( entry[ 'bit_rate' ] ) / 1_024, audio_streams ) )
+        except: bit_rate_audio_1 = 0
+        try:
+            bit_rate_audio_2 = sum(map(lambda entry: float( entry[ 'tags']['BPS'] ) / 1_024, audio_streams ) )
+        except: bit_rate_audio_2 = 0
+        info[ 'audio_bit_rate_kbps' ] = max( bit_rate_audio_1, bit_rate_audio_2 )
+        return info
+    except: return None
 
 def get_directory_names( all_directories ):
     directories_not_globs = set(filter(lambda dirname: '*' not in dirname, all_directories ) )
@@ -142,19 +192,14 @@ def rename_files_in_directory( epdicts, series_name, seasno = 1, dirname = "." )
 
 def process_mp4_srt_eps_to_mkv(
     epdicts, series_name, seasno = 1, srtglob = '*.srt',
-    ffmpeg_exec = which( 'ffmpeg' ),
-    mkvmerge_exec = which( 'mkvmerge' ),
     dirname = "." ):
     #
-    assert( ffmpeg_exec is not None )
-    assert( mkvmerge_exec is not None )
     mp4files = sorted(glob.glob( os.path.join( dirname, '*.mp4' ) ) )
     srtfiles = sorted(glob.glob( os.path.join( dirname, srtglob ) ) )
     assert( len(mp4files) == len(srtfiles)), "ERROR, %d MP4 FILES != %d SRT FILES." % (
       len( mp4files ), len( srtfiles ) )
     #epdicts_max = set(map(lambda idx: idx + starteps, range(len(mp4files))))
     #assert( len( epdicts_max - set( epdicts[ seasno ] ) ) == 0 )
-    assert( all(map(os.path.exists, ( ffmpeg_exec, mkvmerge_exec ) ) ) )
     #
     time00 = time.perf_counter( )
     for idx, tup in enumerate(zip( mp4files, srtfiles ) ):
@@ -185,19 +230,13 @@ def process_mp4_srt_eps_to_mkv(
         len( mp4files ), time.perf_counter( ) - time00 ) ) 
 
 def process_mp4_srt_eps_to_mkv_simple(
-    srtglob = '*.srt',
-    ffmpeg_exec = which( 'ffmpeg' ),
-    mkvmerge_exec = which( 'mkvmerge' ),
-    dirname = "." ):
+    srtglob = '*.srt', dirname = "." ):
     #
-    assert( ffmpeg_exec is not None )
-    assert( mkvmerge_exec is not None )
     mp4files = sorted(glob.glob( os.path.join( dirname, '*.mp4' ) ) )
     srtfiles = sorted(glob.glob( os.path.join( dirname, srtglob ) ) )
     assert( len(mp4files) == len(srtfiles))
     #epdicts_max = set(map(lambda idx: idx + starteps, range(len(mp4files))))
     #assert( len( epdicts_max - set( epdicts[ seasno ] ) ) == 0 )
-    assert( all(map(os.path.exists, ( ffmpeg_exec, mkvmerge_exec ) ) ) )
     #
     time00 = time.perf_counter( )
     for idx, tup in enumerate(zip( mp4files, srtfiles ) ):

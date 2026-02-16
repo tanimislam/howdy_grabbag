@@ -17,68 +17,12 @@ from howdy.movie import tmdb_apiKey
 from pathos.multiprocessing import Pool, cpu_count
 from tabulate import tabulate
 from itertools import chain
-from shutil import which
-
-_ffmpeg_exec      = which( 'ffmpeg' )
-_ffprobe_exec     = which( 'ffprobe' )
-_nice_exec        = which( 'nice' )
-_hcli_exec        = which( 'HandBrakeCLI' )
-_mkvpropedit_exec = which( 'mkvpropedit' )
-assert( _ffmpeg_exec is not None )
-assert( _ffprobe_exec is not None )
-assert( _nice_exec is not None )
-assert( _hcli_exec is not None )
-assert( _mkvpropedit_exec is not None )
-
 #
-def _get_ffprobe_json( filename ):
-    stdout_val = subprocess.check_output(
-        [ _ffprobe_exec, '-v', 'quiet', '-show_streams',
-         '-show_format', '-print_format', 'json', filename ],
-        stderr = subprocess.STDOUT )
-    file_info = json.loads( stdout_val )
-    return file_info
-
-def _get_hevc_bitrate( filename ):
-    try:
-        data = _get_ffprobe_json( filename )
-        info = {
-            'is_hevc' :  data['streams'][0]['codec_name'].lower( ) == 'hevc',
-            'bit_rate_kbps' : float( data['format']['bit_rate' ] ) / 1_024, }
-        audio_streams = list(filter(lambda entry: entry['codec_type'] == 'audio', data['streams'] ) )
-        try:
-            bit_rate_audio_1 = sum(map(lambda entry: float( entry[ 'bit_rate' ] ) / 1_024, audio_streams ) )
-        except Exception as e:
-            bit_rate_audio_1 = 0
-        try:
-            bit_rate_audio_2 = sum(map(lambda entry: float( entry[ 'tags']['BPS'] ) / 1_024, audio_streams ) )
-        except Exception as e:
-            bit_rate_audio_2 = 0
-        info[ 'audio_bit_rate_kbps' ] = max( bit_rate_audio_1, bit_rate_audio_2 )
-        return info
-    except Exception as e:
-        logging.debug( 'PROBLEM WITH %s. ERROR MESSAGE = %s.' % (
-            os.path.realpath( filename ), str( e ) ) )
-        return None
-
-def _get_bitrate_AVI( filename ):
-    try:
-        data = _get_ffprobe_json( filename )
-        info = { 
-            'bit_rate_kbps' : float( data['format']['bit_rate' ] ) / 1_024, }
-        audio_streams = list(filter(lambda entry: entry['codec_type'] == 'audio', data['streams'] ) )
-        try:
-            bit_rate_audio_1 = sum(map(lambda entry: float( entry[ 'bit_rate' ] ) / 1_024, audio_streams ) )
-        except: bit_rate_audio_1 = 0
-        try:
-            bit_rate_audio_2 = sum(map(lambda entry: float( entry[ 'tags']['BPS'] ) / 1_024, audio_streams ) )
-        except: bit_rate_audio_2 = 0
-        info[ 'audio_bit_rate_kbps' ] = max( bit_rate_audio_1, bit_rate_audio_2 )
-        return info
-    except: return None
+from howdy_grabbag import ffmpeg_exec, nice_exec, hcli_exec, mkvpropedit_exec
+from howdy_grabbag.utils import is_hevc, get_hevc_bitrate
 
 def get_tv_library_local( library_name = 'TV Shows' ):
-    fullURL, token = core.checkServerCredentials( doLocal=True )
+    _, token = core.checkServerCredentials( doLocal=True )
     library_names = list( core.get_libraries( token = token ).values( ) )
     assert( library_name in library_names )
     #
@@ -125,7 +69,7 @@ def process_single_filename_hcli( filename, newfile, qual = 28, audio_bit_string
     logging.debug( 'FILENAME = %s, NEWFILE = %s, AUDIO ENTRY HCLI = %s.' % (
         filename, newfile, audio_entry_hcli ) )
     stdout_val = subprocess.check_output([
-        _nice_exec, '-n', '19', _hcli_exec,
+        nice_exec, '-n', '19', hcli_exec,
         '-i', filename, '-e', 'x265', '-q', '%d' % qual,
         audio_entry_hcli[0], audio_entry_hcli[1],
         '-a', ','.join(map(lambda num: '%d' % num, range(1,35))),
@@ -134,7 +78,7 @@ def process_single_filename_hcli( filename, newfile, qual = 28, audio_bit_string
     logging.debug( stdout_val.decode( 'utf8' ) )
     if newfile.endswith( '.mkv' ):
         stdout_val = subprocess.check_output([
-            _nice_exec, '-n', '19', _mkvpropedit_exec,
+            nice_exec, '-n', '19', mkvpropedit_exec,
             newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
         logging.debug( stdout_val.decode( 'utf8' ) )
 
@@ -145,7 +89,7 @@ def process_single_filename_lower_audio( filename, newfile, audio_bit_rate_new =
     logging.debug( 'FILENAME = %s, NEWFILE = %s, NEW AUDIO BIT RATE = %d.' % (
         filename, newfile, audio_bit_rate_new ) )
     stdout_val = subprocess.check_output([
-        _nice_exec, '-n', '19', _ffmpeg_exec,
+        nice_exec, '-n', '19', ffmpeg_exec,
         '-i', 'file:%s' % filename,
         '-vcodec', 'copy',
         '-scodec', 'copy',
@@ -154,11 +98,9 @@ def process_single_filename_lower_audio( filename, newfile, audio_bit_rate_new =
     logging.debug( stdout_val.decode( 'utf8' ) )
     if newfile.endswith( '.mkv' ):
         stdout_val = subprocess.check_output([
-            _nice_exec, '-n', '19', _mkvpropedit_exec,
+            nice_exec, '-n', '19', mkvpropedit_exec,
             newfile, '--add-track-statistics-tags' ], stderr = subprocess.PIPE )
         logging.debug( stdout_val.decode( 'utf8' ) )
-        
-        
         
 def get_all_durations_dataframe( tvdata, min_bitrate = 2000, mode_dataformat = DATAFORMAT.IS_LATER ):
     if mode_dataformat == DATAFORMAT.IS_LATER: assert( min_bitrate >= 1000 )
@@ -217,18 +159,6 @@ def single_show_summary_dataframe( df_sub, showname, mode_dataformat = DATAFORMA
     if mode_dataformat == DATAFORMAT.IS_AVI_OR_MPEG:
         return df_show
     #
-    def get_ffprobe_json( filename ):
-        stdout_val = subprocess.check_output(
-            [ _ffprobe_exec, '-v', 'quiet', '-show_streams',
-             '-show_format', '-print_format', 'json', filename ],
-            stderr = subprocess.STDOUT )
-        file_info = json.loads( stdout_val )
-        return file_info
-
-    def is_hevc( filename ):
-        data = get_ffprobe_json( filename )
-        return data['streams'][0]['codec_name'].lower( ) == 'hevc'
-
     with Pool( processes = min( cpu_count( ), len( df_show ) ) ) as pool:
         dict_of_episodes_hevc = dict( pool.map(
             lambda filename: ( filename, is_hevc( filename ) ),
@@ -345,7 +275,7 @@ def find_files_to_process( fnames, do_hevc = True, min_bitrate = 2_000 ):
     with Pool( processes = cpu_count( ) ) as pool:
         list_of_files_hevc_br = list(filter(
             lambda tup: tup[1] is not None and tup[1]['bit_rate_kbps'] >= min_bitrate,
-            pool.map(lambda fname: ( fname, _get_hevc_bitrate( fname ) ), fnames ) ) )
+            pool.map(lambda fname: ( fname, get_hevc_bitrate( fname ) ), fnames ) ) )
         if not do_hevc:
             list_of_files_hevc_br = list(filter(lambda tup: tup[1]['is_hevc'] == False,
                                                 list_of_files_hevc_br ) )
@@ -381,7 +311,7 @@ def process_multiple_directories_subtitles(
     for idx, filename in enumerate(sorted( fnames_dict ) ):
       time0 = time.perf_counter( )
       stdout_val = subprocess.check_output(
-        [ _nice_exec, '-n', '19', _whisper_exec,
+        [ nice_exec, '-n', '19', _whisper_exec,
           filename, '--output_format', 'srt', '--language', 'en' ],
         stderr = subprocess.PIPE )
       #
