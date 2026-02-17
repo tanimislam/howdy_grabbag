@@ -23,14 +23,17 @@ logger.debug( "mainDir = %s" % _mainDir)
 
 # -- Project information -----------------------------------------------------
 
-project = 'howdy_grabbag'
-copyright = '2022, Tanim Islam'
-author = 'Tanim Islam'
+project   = u'howdy_grabbag'
+copyright = u'%d' % datetime.datetime.now( ).year
+author    = u'Tanim Islam'
 
 tls_verify = True
 
-# The full version, including alpha/beta/rc tags
-release = '0.5'
+# The full version, including alpha/beta/rc tags.
+# follow insructions from https://protips.readthedocs.io/git-tag-version.html#inferring-release-number-from-git-tags
+release = re.sub('^v', '', os.popen('git describe --tags').read().strip())
+# The short X.Y version.
+version = release.split('-')[0].strip( )
 
 
 # -- General configuration ---------------------------------------------------
@@ -82,14 +85,16 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
+# The name of the Pygments (syntax highlighting) style to use.
+pygments_style = 'sphinx'
+
 #
 ## numfig stuff
 numfig = True
 
-
 #
 ## GitHub repo
-issues_github_path = "tanimislam/howdy"
+issues_github_path = "tanimislam/howdy_grabbag"
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -110,3 +115,7 @@ html_static_path = ['_static']
 html_css_files = [
     'custom.css',
 ]
+
+#
+## LaTeX engine, from https://www.sphinx-doc.org/en/master/latex.html
+latex_engine = 'xelatex'
