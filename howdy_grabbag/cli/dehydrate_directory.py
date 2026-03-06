@@ -10,6 +10,7 @@ from howdy_grabbag.utils.dehydrate import (
     find_files_to_process,
     find_files_to_process_AVI,
     get_fnames_from_directories,
+    get_fnames_from_directories_AVI,
     process_multiple_directories,
     process_multiple_directories_AVI,
     process_multiple_directories_subtitles,
@@ -199,7 +200,7 @@ def main_list( ):
         return
     #
     fnames_dict_AVI = find_files_to_process_AVI(
-        get_fnames_from_directories( directory_names ) )
+        get_fnames_from_directories_AVI( directory_names ) )
     data_AVI = list( zip(
         map(os.path.basename, sorted( fnames_dict_AVI ) ),
         map(lambda fname: '%0.1f' % fnames_dict_AVI[ fname ][ 'bit_rate_kbps' ], sorted( fnames_dict_AVI ) ),

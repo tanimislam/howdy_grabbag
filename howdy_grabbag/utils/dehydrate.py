@@ -19,7 +19,7 @@ from tabulate import tabulate
 from itertools import chain
 #
 from howdy_grabbag import ffmpeg_exec, nice_exec, hcli_exec, mkvpropedit_exec
-from howdy_grabbag.utils import is_hevc, get_hevc_bitrate
+from howdy_grabbag.utils import is_hevc, get_hevc_bitrate, get_bitrate_AVI
 
 def get_tv_library_local( library_name = 'TV Shows' ):
     _, token = core.checkServerCredentials( doLocal=True )
@@ -34,9 +34,19 @@ def get_fnames_from_directories( directory_names ):
     fnames = sorted(set(
         chain.from_iterable(map(
             lambda directory_name:
-            glob.glob( os.path.join( directory_name, '*.mp4' ) ) +
-            glob.glob( os.path.join( directory_name, '*.mkv' ) ) +
-            glob.glob( os.path.join( directory_name, '*.webm' ) ), directory_names ) ) ) )
+            glob.glob( os.path.join( directory_name, '*.mp4'  ) ) +
+            glob.glob( os.path.join( directory_name, '*.mkv'  ) ) +
+            glob.glob( os.path.join( directory_name, '*.webm' ) ) +
+            glob.glob( os.path.join( directory_name, '*.m4v'  ) ), directory_names ) ) ) )
+    return fnames
+
+def get_fnames_from_directories_AVI( directory_names ):
+    fnames = sorted(set(
+        chain.from_iterable(map(
+            lambda directory_name:
+            glob.glob( os.path.join( directory_name, '*.avi' ) ) +
+            glob.glob( os.path.join( directory_name, '*.wmv' ) ) +
+            glob.glob( os.path.join( directory_name, '*.mpg' ) ), directory_names ) ) ) )
     return fnames
 
 class DATAFORMAT( Enum ):
@@ -281,10 +291,10 @@ def find_files_to_process( fnames, do_hevc = True, min_bitrate = 2_000 ):
                                                 list_of_files_hevc_br ) )
         return dict( list_of_files_hevc_br )
 
-def find_files_to_process_AVI( fnames ):
+def find_files_to_process_AVI( fnames_AVI ):
     with Pool( processes = cpu_count( ) ) as pool:
         return dict( 
-        pool.map(lambda fname: ( fname, _get_bitrate_AVI( fname ) ), fnames ) )
+        pool.map(lambda fname: ( fname, get_bitrate_AVI( fname ) ), fnames_AVI ) )
 
 def process_multiple_directories_subtitles(
     directory_names = [ os.getcwd( ), ], output_json_file = 'processed_stuff.json',
@@ -418,8 +428,7 @@ def process_multiple_directories_AVI(
 ):
     assert( os.path.basename( output_json_file ).endswith( '.json' ) )
     fnames_dict = find_files_to_process_AVI(
-        get_fnames_from_directories( directory_names ),
-        directory_names = directory_names )
+        get_fnames_from_directories_AVI( directory_names ) )
     time00 = time.perf_counter( )
     list_processed = [ 'found %02d files to dehydrate in %s.' % (
         len( fnames_dict ), list(map(os.path.abspath, directory_names ) ) ), ]
