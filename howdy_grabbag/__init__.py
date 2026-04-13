@@ -6,14 +6,14 @@ from howdy.core import core
 from shutil import which
 
 def _find_exec( exec_name = 'ffmpeg' ):
-    which_exec = which( 'ffmpeg' )
+    which_exec = which( exec_name )
     if which_exec is None: return None
     #
     ## now check if we can execute on it
     if os.access( which_exec, os.X_OK ): return which_exec
     #
     ## otherwise look in /usr/bin
-    which_exec = which( 'ffmpeg', path='/usr/bin')
+    which_exec = which( exec_name, path='/usr/bin')
     if which_exec is None: return None
     if os.access( which_exec, os.X_OK ): return which_exec
     return None
