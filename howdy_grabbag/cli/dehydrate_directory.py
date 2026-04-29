@@ -1,4 +1,4 @@
-"""
+r"""
 This goes through *multiple* directories you specify, and tries to *shrink*  *shrink* episodes (using HEVC_ video quality 28) that start off with a bit rate *above* a certain level, by default 2000 kbps.
 
 .. _HEVC: https://en.wikipedia.org/wiki/High_Efficiency_Video_Coding
@@ -126,8 +126,10 @@ def main_lower_audio( ):
 
 def main_lower_audio_files( ):
     parser = ArgumentParser( )
-    parser.add_argument( '-i', '--input', dest='inputfiles', type=str, action = 'store', required = True, nargs = '+',
-                         help = 'Name of the single olr multiple MKV or MP4 file to dehydrate.' )
+    parser.add_argument( '-i', '--input', dest='inputfiles', type=str, action = 'store', nargs = '*', default = [ ],
+                         help = 'Name of the single or multiple MKV or MP4 file to dehydrate.' )
+    parser.add_argument( '-f', '--files', dest='filelist', type=str, action = 'store', nargs = '*', default = [ ],
+                         help = 'Name of the text file that contains MKV or MP$ files to dehydrate, one per line.' )
     parser.add_argument( '-M', '--minaudiobitrate', dest = 'minaudiobitrate', type = int, action = 'store', default = 256,
                         help = ' '.join([
                             'The minimum audio bitrate (in kbps) of episodes to lower the audio bitrate. Must be >= 10 kbps.',
@@ -140,7 +142,7 @@ def main_lower_audio_files( ):
                          help = 'Will lower the audio bitrate down to these many kbps. Must be >= 10 kbps. Default is 160 kbps.' )
     parser.add_argument( '-J', '--jsonfile', dest = 'parser_lower_audio_jsonfile', metavar = 'JSONFILE', type = str, action = 'store',
                          default = 'processed_stuff_audio.json',
-                         help = 'Name of the JSON file to store progress-as-you-go-along on directory dehydration. Default file name = "processed_stuff_audio.json".' )
+                        help = 'Name of the JSON file to store progress-as-you-go-along on directory dehydration. Default file name = "processed_stuff_audio.json".' )
     #
     ## parsing arguments
     time0 = time.perf_counter( )
@@ -149,13 +151,21 @@ def main_lower_audio_files( ):
     logger = logging.getLogger( )
     if args.do_info: logger.setLevel( logging.INFO )
     #
-    ## dehydrate directory
+    ## files to go through
+    fnames_to_proc = set(filter(os.path.isfile, map(os.path.realpath, args.filelist ) ) )
+    inputfiles = sorted( set(
+        list( chain.from_iterable(map(lambda fname: list(filter(os.path.isfile, map(os.path.realpath, map(lambda line: line.strip( ), open( fname, 'r' ).readlines( ) ) ) ) ),
+                                      fnames_to_proc ) ) ) +
+        list(filter(os.path.isfile, map(os.path.realpath, args.inputfiles ) ) ) ) )
+    assert( len( inputfiles ) > 0 )
+    #
+    ## json file status
     jsonfile = os.path.expanduser( args.parser_lower_audio_jsonfile )
     assert( os.path.basename( jsonfile ).endswith( '.json' ) )
     assert( args.parser_new_audio_bit_rate >= 10 )
     #
     process_multiple_files_lower_audio(
-        args.inputfiles,
+        inputfiles,
         min_audio_bit_rate = args.minaudiobitrate,
         new_audio_bit_rate = args.parser_new_audio_bit_rate,
         output_json_file = jsonfile )
