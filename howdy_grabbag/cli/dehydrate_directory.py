@@ -2,8 +2,10 @@ r"""
 This goes through *multiple* directories you specify, and tries to *shrink*  *shrink* episodes (using HEVC_ video quality 28) that start off with a bit rate *above* a certain level, by default 2000 kbps.
 
 .. _HEVC: https://en.wikipedia.org/wiki/High_Efficiency_Video_Coding
-"""
-import os, sys, logging, time, pandas, numpy, json, subprocess, shutil, uuid, glob
+"""    
+
+import os, sys, signal, logging, time, pandas, numpy, json, subprocess, shutil, uuid, glob
+from howdy_grabbag import signal_handler
 from tabulate import tabulate
 from itertools import chain
 from howdy_grabbag.utils.dehydrate import (
@@ -171,6 +173,7 @@ def main_lower_audio_files( ):
         output_json_file = jsonfile )
     
 def main_list( ):
+    signal.signal( signal.SIGINT, signal_handler )    
     parser = ArgumentParser( )
     parser.add_argument( '-d', '--directories', dest='directories', type=str, action = 'store', nargs = '+', default = [ os.getcwd( ), ],
                         help = 'Name of the directories of MKV and MP4 files to dehydrate. Default is %s.' % [ os.getcwd( ), ] )

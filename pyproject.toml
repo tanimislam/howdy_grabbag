@@ -35,6 +35,7 @@ dependencies = [
     "howdy",
     "redis",
     "validators",
+    "pandas",
     "python-magic",
 ]
 
