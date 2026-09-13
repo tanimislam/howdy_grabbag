@@ -68,8 +68,9 @@ lower_audio_directory   = "howdy_grabbag.cli.dehydrate_directory:main_lower_audi
 lower_audio_files       = "howdy_grabbag.cli.dehydrate_directory:main_lower_audio_files"
 subtitle_directory      = "howdy_grabbag.cli.dehydrate_directory:main_subtitles"
 
-# other bulk/batch MKV file processing utilities
+# other bulk/batch to MKV file processing utilities
 mkv_add_subtitles_files = "howdy_grabbag.cli.mkv_add_subtitles_files:main"
+mp4_add_subtitles_files = "howdy_grabbag.cli.mkv_add_subtitles_files:main_mp4"
 
 # Spotify utilities
 spotify_add_and_fix     = "howdy_grabbag.cli.spotify_add_and_fix:main"
