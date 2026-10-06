@@ -8,7 +8,7 @@ This can *either* tell a table of TV show data on your locally running Plex_ ser
 .. _Plex: https://plex.tv
 .. _HEVC: https://en.wikipedia.org/wiki/High_Efficiency_Video_Coding
 """
-import os, sys, logging, time, pandas, numpy, json, subprocess, shutil, re
+import os, sys, logging, time, pandas, numpy, json, subprocess, shutil, re, warnings
 from enum import Enum
 from howdy.core import core, session
 from howdy.tv import tv, get_token, tv_attic, get_tvdb_api, TMDBShowIds
@@ -20,6 +20,9 @@ from argparse import ArgumentParser
 #
 from howdy_grabbag import (
     ffmpeg_exec, ffprobe_exec, nice_exec, hcli_exec )
+#
+from bs4 import XMLParsedAsHTMLWarning
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 _MINBITRATE   = 1000
 
