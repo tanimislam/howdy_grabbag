@@ -44,11 +44,12 @@ Homepage = "https://github.com/tanimislam/howdy_grabbag"
 Repository = "https://github.com/tanimislam/howdy_grabbag"
 
 [project.scripts]
-# Movie conversion utilities
+# Movie and TV conversion utilities
 convert_mp4movie_to_mkv = "howdy_grabbag.cli.convert_mp4movie_to_mkv:main"
 convert_mp4tv_to_mkv    = "howdy_grabbag.cli.convert_mp4tv_to_mkv:main"
 dvd_to_mkv              = "howdy_grabbag.cli.dvd_to_mkv:main"
 rename_mkv_tv           = "howdy_grabbag.cli.rename_mkv_tv:main"
+rename_mkv_mp4_dir      = "howdy_grabbag.cli.rename_mkv_mp4_dir:main"
 
 # Music utilities
 howdy_music_compilation = "howdy_grabbag.cli.howdy_music:main_compilation"
