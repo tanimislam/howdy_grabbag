@@ -141,7 +141,6 @@ def get_rsync_commands(
         use_local_dir_for_upload = False )
     return mycmd, mxcmd
 
-
 def rsync_upload_mkv( mycmd, mxcmd, numtries = 10 ):
     assert( numtries > 0 )
     mystr_split = [ 'STARTING THIS RSYNC CMD: %s' % mxcmd ] # 20260121 TODO: try mxcmd

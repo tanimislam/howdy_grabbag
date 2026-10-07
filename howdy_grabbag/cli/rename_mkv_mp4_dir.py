@@ -25,7 +25,7 @@ def rename_directory_episodes(
     ## now perform the rename
     utils.rename_files_in_directory(
         epdicts_sub,
-        showname,
+        tvshow,
         dirname = os.path.realpath( dirname ),
         seasno = seasno )
     logging.info( 'processed %02d episodes in %s in %0.3f seconds.' % (
